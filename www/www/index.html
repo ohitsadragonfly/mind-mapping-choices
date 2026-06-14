@@ -956,12 +956,12 @@ function resize(){
   L.BB=H*0.91;     // Brain fills to near bottom of screen
   L.BCX=W/2;
   // Brain is WIDE — side boxes are 11% of screen each
-  // Side box geometry (must be defined BEFORE L.BHW uses it)
-  L.SBW=Math.min(W*0.115,64);
-  L.SBXL=4;
-  L.SBXR=W-L.SBW-4;
-  // Brain width: guaranteed clear of side boxes on both sides
+  // Brain width: keep clear of side boxes (SBW + 14px gap on each side)
   L.BHW=Math.min(W/2-L.SBW-14, 175);
+  // Side box geometry
+  L.SBXL=4;
+  L.SBXR=W-Math.min(W*0.115,68)-4;
+  L.SBW=Math.min(W*0.115,68);
   L.WH=H;
   rebuildWalls();
   if(typeof initBgNeurons==='function')initBgNeurons();
@@ -992,9 +992,14 @@ function rebuildWalls(){
   // Each entry: {yFrac, xOffsetFrac, widthFrac, angleDeg}
   // xOffset = 0 means centered; positive = shifted right, negative = left
   // Width covers a portion of brain width (gaps let words fall through)
-  // Category-specific brain map (level-based gyri structure)
-  const cat=state&&state.category?state.category:'senior';
-  const FOLD_RAMPS=getBrainRampsForCategory(cat);
+  const FOLD_RAMPS=[
+    // Steep angles for vacuum-tube cascade — words slide sharply downward
+    {y:0.14, xOff:-0.10, w:0.55, deg: 22},  // steep rightward slope
+    {y:0.28, xOff: 0.10, w:0.55, deg:-22},  // steep leftward slope
+    {y:0.42, xOff:-0.08, w:0.52, deg: 18},
+    {y:0.56, xOff: 0.08, w:0.52, deg:-18},
+    {y:0.70, xOff: 0.00, w:0.46, deg:  9},  // center funnel, gentle slope
+  ];
 
   state.pegPins=[];   // repurpose as fold ramp positions for visual
   state.pinFlashes={}; // flash tracking
@@ -1062,67 +1067,6 @@ function rebuildWalls(){
 }
 
 
-
-// ══════════════════════════════════════════════════════════════
-// LEVEL-SPECIFIC BRAIN MAPS (Gemini 5-level progression)
-// Each category gets a unique internal structure that changes
-// the physics puzzle — different gyri = different drop strategy.
-// ══════════════════════════════════════════════════════════════
-function getBrainRampsForCategory(cat){
-  switch(cat){
-
-    case 'self': // Level 01 — The Feedback Loop
-      // Open, minimal friction. Single broad central shelf.
-      // Easy introductory layout — wide gaps, flows freely.
-      return [
-        {y:0.30, xOff: 0.00, w:0.60, deg:  4},
-        {y:0.58, xOff: 0.00, w:0.60, deg: -4},
-      ];
-
-    case 'parenting': // Level 02 — The Mirror Room
-      // Two parallel inward-pointing waves. Moderate angling needed.
-      return [
-        {y:0.22, xOff:-0.12, w:0.52, deg: 12},
-        {y:0.42, xOff: 0.12, w:0.52, deg:-12},
-        {y:0.62, xOff:-0.12, w:0.52, deg: 12},
-        {y:0.80, xOff: 0.10, w:0.44, deg: -8},
-      ];
-
-    case 'engineer': // Level 03 — The Code Matrix
-      // Zig-zag staircase. Can't drop straight — must bank off walls.
-      return [
-        {y:0.15, xOff:-0.24, w:0.50, deg: 22},
-        {y:0.30, xOff: 0.24, w:0.50, deg:-22},
-        {y:0.45, xOff:-0.24, w:0.50, deg: 22},
-        {y:0.60, xOff: 0.24, w:0.50, deg:-22},
-        {y:0.76, xOff:-0.10, w:0.44, deg: 14},
-      ];
-
-    case 'quantum': // Level 04 — The Quantum Leap
-      // Sharp angular V-spikes. Extreme precision required.
-      // High-speed words must thread between spikes to reach bottom.
-      return [
-        {y:0.20, xOff:-0.22, w:0.42, deg: 32},
-        {y:0.20, xOff: 0.22, w:0.42, deg:-32},
-        {y:0.48, xOff: 0.00, w:0.32, deg:  0},  // flat blocker
-        {y:0.66, xOff:-0.20, w:0.40, deg: 28},
-        {y:0.66, xOff: 0.20, w:0.40, deg:-28},
-      ];
-
-    default: // senior / Level 05 — The Mortal Score
-      // Wide horizontal shelves — near-labyrinthine, tight side gaps.
-      // No direct path; words must find the narrow gap on each row.
-      return [
-        {y:0.18, xOff: 0.12, w:0.62, deg:  2},
-        {y:0.34, xOff:-0.12, w:0.62, deg: -2},
-        {y:0.50, xOff: 0.12, w:0.62, deg:  2},
-        {y:0.66, xOff:-0.12, w:0.62, deg: -2},
-        {y:0.82, xOff: 0.06, w:0.56, deg:  1},
-      ];
-  }
-}
-
-// Procedural brain fold generator
 
 // ---------- Word bank ----------
 // 100 words per category, using exact wording from the master blueprint.
@@ -4819,7 +4763,13 @@ function drawBrain(){
   const foldBase=isOverload?'rgba(255,110,80,':'rgba(79,195,247,';
 
   // Each ramp position: {y:fraction, xOff:fraction, w:fraction, deg}
-  const VISUAL_FOLDS=getBrainRampsForCategory(state&&state.category?state.category:'senior');
+  const VISUAL_FOLDS=[
+    {y:0.14,xOff:-0.10,w:0.55,deg: 22},
+    {y:0.28,xOff: 0.10,w:0.55,deg:-22},
+    {y:0.42,xOff:-0.08,w:0.52,deg: 18},
+    {y:0.56,xOff: 0.08,w:0.52,deg:-18},
+    {y:0.70,xOff: 0.00,w:0.46,deg:  9},
+  ];
 
   // ── BRAIN-FOLD GYRUS CURVES (S-shaped, same angle as physics ramps) ──
   // Each line is drawn as a series of bezier gyri (brain folds) at the same angle.
@@ -5025,19 +4975,6 @@ function drawBrain(){
       }
       cx.restore();
     });
-  }
-
-  // ── LEVEL NAME LABEL ──
-  const levelNames={self:'LVL 01 · FEEDBACK LOOP',parenting:'LVL 02 · MIRROR ROOM',
-    engineer:'LVL 03 · CODE MATRIX',quantum:'LVL 04 · QUANTUM LEAP',senior:'LVL 05 · MORTAL SCORE'};
-  const lvlName=levelNames[state&&state.category?state.category:'senior']||'';
-  if(lvlName){
-    cx.save();
-    cx.font=`bold ${Math.max(8,W*0.018)}px monospace`;cx.textAlign='center';
-    cx.fillStyle=isOverload?'rgba(255,150,80,.55)':'rgba(79,195,247,.45)';
-    cx.shadowColor=isOverload?'rgba(255,80,40,.4)':'rgba(79,195,247,.4)';cx.shadowBlur=6;
-    cx.fillText(lvlName,c,top-8);
-    cx.restore();
   }
 
   // ── CORNER BRACKETS ──
@@ -6021,7 +5958,6 @@ if(_initBtn)_initBtn.addEventListener('click',()=>{
 document.querySelectorAll('.gallery-frame[data-cat]').forEach(btn=>{
   btn.addEventListener('click',()=>{
     state.category=btn.dataset.cat;
-    rebuildWalls();  // rebuild brain map with this level's unique gyri pattern
     document.getElementById('intro').classList.add('gone');
     document.getElementById('menuBtn').classList.add('show');
     setTimeout(()=>{startRound();},400);
