@@ -49,6 +49,8 @@
     font-family:ui-monospace,Menlo,Monaco,monospace;-webkit-user-select:none;user-select:none;
     -webkit-tap-highlight-color:transparent;touch-action:none;overscroll-behavior:none}
   canvas{display:block;position:absolute;inset:0}
+  #introCanvas{z-index:20;pointer-events:all}
+  #introCanvas.gone{opacity:0;pointer-events:none;transition:opacity .8s ease}
 
   .hud{position:fixed;left:0;right:0;padding:14px 16px;display:flex;
     justify-content:space-between;font-size:9px;letter-spacing:.28em;
@@ -60,7 +62,24 @@
   #bar{width:100%;height:1px;background:rgba(255,255,255,.1);overflow:hidden}
   #fill{height:100%;width:0%;background:linear-gradient(90deg,#4FC3F7,#B3E5FC);
     transition:width .5s ease;box-shadow:0 0 10px #4FC3F7}
-  #row{display:flex;justify-content:space-between}
+  #row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  #eraseCount{font-size:8px;letter-spacing:.32em;color:rgba(79,195,247,.75);
+    text-shadow:0 0 6px rgba(79,195,247,.5)}
+  /* PROCRASTINATE BUTTON — red glowing pill that drops 5 negatives + clears 2 biggest */
+  #procBtn{display:none;margin:6px auto 0;padding:9px 22px;
+    font-family:inherit;font-size:10px;letter-spacing:.4em;font-weight:600;
+    color:#FFD0D0;background:linear-gradient(180deg,rgba(255,40,40,.18),rgba(180,10,10,.32));
+    border:1px solid rgba(255,90,90,.7);border-radius:4px;
+    text-transform:uppercase;cursor:pointer;pointer-events:auto;
+    box-shadow:0 0 14px rgba(255,82,82,.45),inset 0 0 12px rgba(255,82,82,.18);
+    text-shadow:0 0 6px rgba(255,120,120,.85);
+    transition:all .15s ease;touch-action:manipulation;
+    display:flex;flex-direction:column;align-items:center;gap:2px}
+  #procBtn small{font-size:6.5px;letter-spacing:.22em;color:rgba(255,200,200,.65);
+    text-shadow:none;font-weight:400}
+  #procBtn:active{transform:scale(.95);background:linear-gradient(180deg,rgba(255,60,60,.4),rgba(200,20,20,.5))}
+  #procBtn.cooldown{opacity:.35;pointer-events:none;filter:grayscale(.5)}
+  #procBtn.show{display:flex}
 
   /* MENU BTN */
   #menuBtn{position:fixed;top:38px;right:14px;z-index:50;
@@ -72,13 +91,16 @@
   #menuBtn.show{display:block}
   #menuBtn:active,#menuBtn:hover{background:rgba(255,255,255,.15);border-color:#fff}
 
-  /* STREAK POPUP - shows on chained positive hits */
-  #streakPopup{position:fixed;top:18%;left:50%;transform:translateX(-50%) scale(.6);
-    font-family:inherit;font-size:14px;font-weight:500;letter-spacing:.45em;
-    color:#fff;text-shadow:0 0 14px rgba(79,195,247,.9),0 0 24px rgba(79,195,247,.5);
+  /* STREAK POPUP - big glowing "COMBO X3" style */
+  #streakPopup{position:fixed;top:38%;left:50%;transform:translateX(-50%) scale(.4);
+    font-family:'Impact','Arial Black',sans-serif;font-size:42px;font-weight:900;
+    letter-spacing:.06em;color:#fff;
+    background:linear-gradient(180deg,#FF4FB8 0%,#8B6FFF 50%,#4FC3F7 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 16px rgba(255,79,184,.7)) drop-shadow(0 0 28px rgba(79,195,247,.6));
     pointer-events:none;z-index:40;opacity:0;
-    transition:opacity .15s ease,transform .25s cubic-bezier(.34,1.56,.64,1);
-    text-transform:uppercase;white-space:nowrap}
+    transition:opacity .15s ease,transform .35s cubic-bezier(.34,1.8,.64,1);
+    text-transform:uppercase;white-space:nowrap;text-align:center}
   #streakPopup.pop{opacity:1;transform:translateX(-50%) scale(1)}
 
   /* MENU POPUP */
@@ -101,15 +123,84 @@
     font-family:inherit;text-transform:uppercase;cursor:pointer;padding:10px 20px;
     touch-action:manipulation;pointer-events:auto}
 
+  /* SETTINGS POPUP */
+  #settingsPopup{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:65;
+    display:none;align-items:center;justify-content:center;flex-direction:column;
+    gap:18px;padding:24px;touch-action:manipulation;pointer-events:auto}
+  #settingsPopup.show{display:flex}
+  #settingsPopup h2{font-size:11px;letter-spacing:.45em;font-weight:400;
+    color:#fff;margin-bottom:8px;text-transform:uppercase}
+  .settingRow{display:flex;align-items:center;justify-content:space-between;
+    width:100%;max-width:280px;padding:14px 16px;
+    background:rgba(255,255,255,.04);border:1px solid rgba(79,195,247,.25);
+    border-radius:4px}
+  .settingLabel{font-size:10px;letter-spacing:.32em;color:#fff;
+    text-transform:uppercase;display:flex;flex-direction:column;gap:3px}
+  .settingLabel small{font-size:8px;letter-spacing:.3em;color:rgba(79,195,247,.7)}
+  /* Toggle switch */
+  .toggleSwitch{position:relative;display:inline-block;width:44px;height:22px;flex-shrink:0}
+  .toggleSwitch input{opacity:0;width:0;height:0}
+  .toggleSlider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.1);
+    border:1px solid rgba(255,255,255,.2);transition:.25s;border-radius:11px}
+  .toggleSlider:before{position:absolute;content:'';height:14px;width:14px;left:3px;top:50%;
+    margin-top:-7px;background:rgba(255,255,255,.6);transition:.25s;border-radius:50%}
+  .toggleSwitch input:checked + .toggleSlider{background:rgba(79,195,247,.25);
+    border-color:#4FC3F7;box-shadow:0 0 8px rgba(79,195,247,.4)}
+  .toggleSwitch input:checked + .toggleSlider:before{transform:translateX(22px);
+    background:#4FC3F7;box-shadow:0 0 6px rgba(79,195,247,.7)}
+  /* Volume slider */
+  .volSlider{-webkit-appearance:none;appearance:none;width:120px;height:4px;
+    background:rgba(255,255,255,.15);border-radius:2px;outline:none;cursor:pointer}
+  .volSlider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:16px;height:16px;background:#4FC3F7;border-radius:50%;cursor:pointer;
+    box-shadow:0 0 8px rgba(79,195,247,.7)}
+  .volSlider::-moz-range-thumb{width:16px;height:16px;background:#4FC3F7;
+    border-radius:50%;cursor:pointer;border:none;box-shadow:0 0 8px rgba(79,195,247,.7)}
+  #settingsClose{margin-top:8px;font-size:10px;letter-spacing:.4em;
+    color:rgba(255,255,255,.55);background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.2);
+    font-family:inherit;text-transform:uppercase;cursor:pointer;padding:10px 20px}
+  #settingsClose:active{background:rgba(255,255,255,.12)}
+
   /* SCREEN OVERLAYS (boot + intro) */
   .screen-overlay,#intro,#bootScreen{position:fixed;inset:0;background:#000;z-index:30;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:24px;gap:12px;transition:opacity .5s ease;overflow-y:auto}
   .screen-overlay.gone,#intro.gone,#bootScreen.gone{opacity:0;pointer-events:none}
-  #intro h1,#bootScreen h1{font-size:14px;letter-spacing:.5em;font-weight:400;text-align:center;
-    margin-bottom:4px;text-shadow:0 0 10px rgba(255,255,255,.15)}
-  .subtitle,#intro p,#bootScreen p{font-size:9px;letter-spacing:.35em;color:rgba(255,255,255,.45);
-    text-transform:uppercase;margin-bottom:16px;text-align:center}
+  /* Chrome-bevel title — heavy beveled MIND with cyan-glow REAL ESTATE */
+  #intro h1,#bootScreen h1{display:flex;flex-direction:column;align-items:center;
+    gap:2px;margin-bottom:14px;line-height:1}
+  .title-mind{font-family:'Impact','Arial Black',sans-serif;font-size:54px;font-weight:900;
+    letter-spacing:.04em;line-height:.92;text-transform:uppercase;
+    background:linear-gradient(180deg,
+      #ffffff 0%,
+      #ffeaf5 8%,
+      #ff95d2 20%,
+      #FF4FB8 38%,
+      #c45fff 55%,
+      #8B6FFF 70%,
+      #4FC3F7 88%,
+      #B3E5FC 100%);
+    -webkit-background-clip:text;background-clip:text;
+    color:transparent;-webkit-text-fill-color:transparent;
+    filter:
+      drop-shadow(0 2px 0 rgba(20,5,40,.65))
+      drop-shadow(0 4px 1px rgba(40,10,60,.4))
+      drop-shadow(0 0 14px rgba(255,79,184,.55))
+      drop-shadow(0 0 26px rgba(79,195,247,.4))
+      drop-shadow(0 0 42px rgba(139,111,255,.25))}
+  .title-real{font-family:'Impact','Arial Black',sans-serif;font-size:17px;font-weight:700;
+    letter-spacing:.36em;color:#4FC3F7;text-transform:uppercase;
+    text-shadow:
+      0 0 10px rgba(79,195,247,.85),
+      0 0 22px rgba(79,195,247,.45),
+      0 1px 0 rgba(0,30,50,.6)}
+  @media(min-width:680px){.title-mind{font-size:78px}.title-real{font-size:22px}}
+  /* Legacy single-line title fallback (kept for safety) */
+  #intro h1.legacy,#bootScreen h1.legacy{display:block;font-size:30px;letter-spacing:.18em}
+  .subtitle,#intro p,#bootScreen p{font-size:9px;letter-spacing:.35em;color:rgba(180,200,230,.55);
+    text-transform:uppercase;margin-bottom:16px;text-align:center;
+    text-shadow:0 0 6px rgba(79,195,247,.3)}
 
   /* GALLERY WALL — grid of mind-map frames */
   .gallery-wall{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
@@ -152,14 +243,23 @@
   @keyframes pop{to{opacity:1;transform:translateY(0)}}
 
   /* GAME OVER */
-  #over{position:fixed;inset:0;background:#000;z-index:40;
-    display:none;align-items:center;justify-content:center;flex-direction:column;
-    padding:24px;text-align:center}
+  #over{position:fixed;inset:0;background:radial-gradient(ellipse at center,#1a0a14 0%,#000 75%);
+    z-index:40;display:none;align-items:center;justify-content:center;flex-direction:column;
+    padding:24px;text-align:center;gap:8px}
   #over.show{display:flex}
-  #saying{font-size:18px;letter-spacing:.45em;font-weight:500;
-    text-transform:uppercase;line-height:1.4;
+  /* Title on over screen mirrors boot screen — scaled down and given entrance animation */
+  .over-title{margin-bottom:18px;opacity:0;transform:translateY(14px);
+    animation:overTitleIn .9s cubic-bezier(.16,1,.3,1) .15s forwards}
+  .over-title .title-mind{font-size:48px}
+  .over-title .title-real{font-size:15px}
+  @media(min-width:680px){.over-title .title-mind{font-size:72px}.over-title .title-real{font-size:20px}}
+  @keyframes overTitleIn{from{opacity:0;transform:translateY(14px) scale(.96)}
+    to{opacity:1;transform:translateY(0) scale(1)}}
+  #saying{font-size:14px;letter-spacing:.42em;font-weight:500;
+    text-transform:uppercase;line-height:1.4;color:rgba(220,235,255,.85);
+    text-shadow:0 0 10px rgba(79,195,247,.4);
     animation:flicker 1s ease}
-  #subSaying{margin-top:18px;font-size:9px;letter-spacing:.4em;
+  #subSaying{margin-top:20px;font-size:9px;letter-spacing:.4em;
     color:rgba(255,255,255,.4);text-transform:uppercase}
   @keyframes flicker{
     0%{opacity:0;transform:scale(.9)}
@@ -178,61 +278,97 @@
 </head>
 <body>
 
+<canvas id="introCanvas"></canvas>
 <canvas id="g"></canvas>
 
 <div class="hud" id="hudTop"><span id="cat">·</span><span id="ph">·</span></div>
 <button id="menuBtn" aria-label="menu">MENU</button>
 <div id="streakPopup"></div>
 
+<!-- Background music. Add more files to TRACKS array in JS to rotate. -->
+<audio id="bgMusic" loop preload="auto">
+  <source src="audio/audio.mp3" type="audio/mpeg">
+</audio>
+
 <div id="menuPopup">
   <h2>menu</h2>
   <button class="menuOpt" id="goHomeBtn">Go Home<small>back to category screen</small></button>
   <button class="menuOpt" id="restartBtn">Restart<small>empty the brain · keep category</small></button>
+  <button class="menuOpt" id="settingsBtn">Settings<small>sound · volume</small></button>
   <button id="menuClose">close</button>
 </div>
+
+<div id="settingsPopup">
+  <h2>settings</h2>
+  <div class="settingRow">
+    <div class="settingLabel">Music
+      <small id="musicStateLabel">on</small>
+    </div>
+    <label class="toggleSwitch">
+      <input type="checkbox" id="musicToggle" checked>
+      <span class="toggleSlider"></span>
+    </label>
+  </div>
+  <div class="settingRow">
+    <div class="settingLabel">Volume
+      <small id="volumeLabel">50%</small>
+    </div>
+    <input type="range" id="volumeSlider" min="0" max="100" value="50" class="volSlider">
+  </div>
+  <button id="settingsClose">close</button>
+</div>
 <div class="hud" id="hudBot">
-  <div id="row"><span>flow state</span><span id="pct">0%</span></div>
+  <div id="row">
+    <span>flow state</span>
+    <span id="eraseCount">CLEARED 0000</span>
+    <span id="pct">0%</span>
+  </div>
   <div id="bar"><div id="fill"></div></div>
+  <button id="procBtn" type="button">[ PROCRASTINATE ]<small>+5 thoughts · clears 2 biggest</small></button>
 </div>
 <div id="scrollHint">scroll</div>
 
-<div id="bootScreen" class="screen-overlay">
-  <h1>MIND REAL ESTATE</h1>
-  <p class="subtitle">Cognitive Restructuring Interface</p>
-  <button class="gallery-frame" id="initSyncBtn">
-    <span class="frame-title">BOOT SYSTEM CORE</span>
-    <span class="frame-status">// PRESS TO ENTER</span>
-  </button>
-</div>
+<!-- ═══ INTRO CANVAS OVERLAY (replaces bootScreen) ═══
+     The intro engine draws directly onto #introCanvas:
+     Phase 0 → person screaming words; Phase 1 → zoom into brain;
+     Phase 2 → mind-map 14 nodes; Phase 3 → hand selects 14→7→6;
+     Phase 4 → zoom to category select. Tap anywhere to skip. -->
+<div id="bootScreen" style="display:none"></div>
 
-<div id="intro" class="screen-overlay gone">
-  <h1>COGNITIVE HQ CORE</h1>
-  <p class="subtitle">Select active memory architecture frame to restore focus balance</p>
+<div id="intro" class="screen-overlay gone" style="z-index:25;padding:18px 12px 10px">
+  <h1 style="margin-bottom:6px;font-size:13px;letter-spacing:.4em">SELECT BRAIN NETWORK</h1>
+  <p class="subtitle" style="margin-bottom:12px">Choose the cognitive system to clear — each network shapes how you think</p>
   <div class="gallery-wall" id="galleryWallGrid">
-    <button class="gallery-frame" data-cat="quantum">
-      <div><div class="frame-title">01 // QUANTUM LEAP</div><div class="frame-desc">Break out of linear progress and structural loops.</div></div>
-      <div class="frame-status">// ACCESS READY</div>
+    <button class="gallery-frame" data-cat="quantum" style="border-color:rgba(255,105,180,.45)">
+      <div><div class="frame-title" style="color:#FF69B4">⚡ SALIENCE NETWORK</div>
+      <div class="frame-desc" style="font-size:8px;color:rgba(255,155,200,.65)">Detects threats, salient events &amp; switches cognitive control (dACC · AI · Amygdala)</div></div>
+      <div class="frame-status" style="color:rgba(255,105,180,.6)">SN // PRESS TO ENTER</div>
     </button>
-    <button class="gallery-frame" data-cat="self">
-      <div><div class="frame-title">02 // SELF-EMPLOYMENT</div><div class="frame-desc">Scale the solo operator. Clear the feast-or-famine loop.</div></div>
-      <div class="frame-status">// ACCESS READY</div>
+    <button class="gallery-frame" data-cat="self" style="border-color:rgba(180,100,255,.45)">
+      <div><div class="frame-title" style="color:#B464FF">🌙 DEFAULT MODE</div>
+      <div class="frame-desc" style="font-size:8px;color:rgba(200,155,255,.65)">Self-reflection, autobiographical memory &amp; mind-wandering (mPFC · PCC · Angular Gyrus)</div></div>
+      <div class="frame-status" style="color:rgba(180,100,255,.6)">DMN // PRESS TO ENTER</div>
     </button>
-    <button class="gallery-frame" data-cat="parenting">
-      <div><div class="frame-title">03 // PARENTING</div><div class="frame-desc">The home is a mirror. Clean environmental triggers.</div></div>
-      <div class="frame-status">// ACCESS READY</div>
+    <button class="gallery-frame" data-cat="parenting" style="border-color:rgba(64,196,255,.45)">
+      <div><div class="frame-title" style="color:#40C4FF">🎯 ATTENTION NETWORKS</div>
+      <div class="frame-desc" style="font-size:8px;color:rgba(130,210,255,.65)">Top-down focus &amp; bottom-up reorienting (IPS · FEF · VFC · TPJ)</div></div>
+      <div class="frame-status" style="color:rgba(64,196,255,.6)">DAN/VAN // PRESS TO ENTER</div>
     </button>
-    <button class="gallery-frame" data-cat="engineer">
-      <div><div class="frame-title">04 // ENGINEERING</div><div class="frame-desc">System architecture &amp; technical debt purge.</div></div>
-      <div class="frame-status">// ACCESS READY</div>
+    <button class="gallery-frame" data-cat="engineer" style="border-color:rgba(100,230,130,.45)">
+      <div><div class="frame-title" style="color:#64E682">🧩 EXECUTIVE CONTROL</div>
+      <div class="frame-desc" style="font-size:8px;color:rgba(150,240,170,.65)">Working memory, planning &amp; goal-directed decisions (dlPFC · PPC · IPS)</div></div>
+      <div class="frame-status" style="color:rgba(100,230,130,.6)">CEN // PRESS TO ENTER</div>
     </button>
-    <button class="gallery-frame" data-cat="senior">
-      <div><div class="frame-title">05 // RETIREMENT</div><div class="frame-desc">The apex era. Identity and structural decay.</div></div>
-      <div class="frame-status">// ACCESS READY</div>
+    <button class="gallery-frame" data-cat="senior" style="border-color:rgba(255,200,50,.45)">
+      <div><div class="frame-title" style="color:#FFC832">💎 REWARD NETWORK</div>
+      <div class="frame-desc" style="font-size:8px;color:rgba(255,220,120,.65)">Dopamine, motivation &amp; reinforcement learning (VTA · NAc · OFC · Amygdala)</div></div>
+      <div class="frame-status" style="color:rgba(255,200,50,.6)">MESOLIMBIC // PRESS TO ENTER</div>
     </button>
   </div>
 </div>
 
 <div id="over">
+  <h1 class="over-title"><span class="title-mind">MIND</span><span class="title-real">REAL ESTATE</span></h1>
   <div id="saying">LET'S GET TO WORK</div>
   <div id="subSaying">tap to begin again</div>
 </div>
@@ -240,7 +376,560 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 <script>
 "use strict";
+// roundRect polyfill for older browsers (Safari < 15.4, older Android)
+if(typeof CanvasRenderingContext2D!=='undefined'&&!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    const R=Math.min(r,w/2,h/2);
+    this.moveTo(x+R,y);
+    this.lineTo(x+w-R,y);this.quadraticCurveTo(x+w,y,x+w,y+R);
+    this.lineTo(x+w,y+h-R);this.quadraticCurveTo(x+w,y+h,x+w-R,y+h);
+    this.lineTo(x+R,y+h);this.quadraticCurveTo(x,y+h,x,y+h-R);
+    this.lineTo(x,y+R);this.quadraticCurveTo(x,y,x+R,y);
+    this.closePath();
+    return this;
+  };
+}
 const{Engine,Bodies,Body,Composite,Events}=Matter;
+
+// ═══════════════════════════════════════════════════════════════
+// INTRO CINEMATIC ENGINE
+// 5-phase animated intro playing on #introCanvas overlay.
+// Phase 0: Person holds head, words burst out of brain
+// Phase 1: Camera zooms into brain silhouette
+// Phase 2: Mind-map explodes — 14 thought-nodes orbit the brain
+// Phase 3: Giant hand descends; taps once (14→7), taps again (7→6)
+// Phase 4: Final zoom → category select fades in
+// Tap / click anywhere to skip straight to category select.
+// ═══════════════════════════════════════════════════════════════
+const iCV=document.getElementById('introCanvas');
+const iCX=iCV.getContext('2d');
+let iW=0,iH=0,iDPR=1;
+let iPhase=0,iT=0,iPrev=0;
+let iRunning=true;
+let _iRAF=0;
+
+// Phase durations in ms
+const IPH_DUR=[3200,2600,2000,0,600];  // phase3=0 (skip), phase4=quick fade
+const NETWORK_COLORS={quantum:'#FF69B4',self:'#B464FF',parenting:'#40C4FF',engineer:'#64E682',senior:'#FFC832'};
+
+// Thought words that burst from the person's head
+const BURST_WORDS=[
+  'doomscrolling','overthinking','procrastinating','comparing yourself',
+  'negative self-talk','people pleasing','ruminating','fear of failure',
+  'perfectionism','avoidance','isolation','late nights',
+  'overspending','toxic loops','junk food','skipping workouts',
+  'self-sabotage','catastrophizing',
+];
+
+// Word particles (phase 0)
+let iParts=[];
+function spawnBurstWords(cx,cy){
+  iParts=[];
+  BURST_WORDS.forEach((w,i)=>{
+    const angle=(i/BURST_WORDS.length)*Math.PI*2-Math.PI/2;
+    const speed=0.04+Math.random()*0.05;
+    const dist=0.12+Math.random()*0.18; // fraction of screen
+    iParts.push({
+      word:w, x:cx, y:cy,
+      tx:cx+Math.cos(angle)*iW*dist, ty:cy+Math.sin(angle)*iH*dist,
+      progress:0, speed, size:Math.min(iW*0.026,11),
+      col:`hsl(${340+Math.random()*60},90%,68%)`
+    });
+  });
+}
+
+// Mind-map nodes (phase 2-3)
+let iNodes=[];
+let iNodeVisible=14;
+let iHandY=-200;
+let iHandTap=0; // 0=approaching, 1=first tap done, 2=second tap done
+let iHandX=0;
+
+function buildNodes(){
+  iNodes=[];
+  const words=[...BURST_WORDS.slice(0,14)];
+  for(let i=0;i<14;i++){
+    const angle=(i/14)*Math.PI*2;
+    const r=Math.min(iW,iH)*0.28;
+    iNodes.push({
+      word:words[i], angle, r,
+      x:iW/2+Math.cos(angle)*r, y:iH*0.42+Math.sin(angle)*r*0.7,
+      alive:true, dead:false, deadT:0
+    });
+  }
+}
+
+// Resize intro canvas to match window
+function resizeIntro(){
+  iDPR=Math.min(devicePixelRatio||1,2);
+  iW=innerWidth; iH=innerHeight;
+  iCV.width=iW*iDPR; iCV.height=iH*iDPR;
+  iCV.style.width=iW+'px'; iCV.style.height=iH+'px';
+  iCX.setTransform(iDPR,0,0,iDPR,0,0);
+}
+
+function drawPerson(ax,ay,scale,alpha){
+  const cx=iCX;
+  const s=scale;
+  cx.globalAlpha=alpha;
+  cx.strokeStyle='#fff';
+  cx.lineWidth=Math.max(1.5,s*3.5);
+  cx.lineCap='round';
+  cx.lineJoin='round';
+  // Head
+  cx.beginPath();cx.arc(ax,ay-s*60,s*24,0,Math.PI*2);cx.stroke();
+  // Body
+  cx.beginPath();cx.moveTo(ax,ay-s*36);cx.lineTo(ax,ay+s*30);cx.stroke();
+  // Arms UP — hands gripping sides of head (distress)
+  cx.beginPath();cx.moveTo(ax,ay-s*20);
+  cx.lineTo(ax-s*32,ay-s*50);cx.lineTo(ax-s*20,ay-s*72);cx.stroke();
+  cx.beginPath();cx.moveTo(ax,ay-s*20);
+  cx.lineTo(ax+s*32,ay-s*50);cx.lineTo(ax+s*20,ay-s*72);cx.stroke();
+  // Legs
+  cx.beginPath();cx.moveTo(ax,ay+s*30);cx.lineTo(ax-s*20,ay+s*76);cx.stroke();
+  cx.beginPath();cx.moveTo(ax,ay+s*30);cx.lineTo(ax+s*20,ay+s*76);cx.stroke();
+  // Screaming mouth (open oval, red)
+  cx.fillStyle='#FF5252';
+  cx.beginPath();
+  cx.ellipse(ax,ay-s*52,s*12,s*8,0,0,Math.PI*2);cx.fill();
+  // Eyes (wide)
+  cx.fillStyle='#fff';
+  cx.beginPath();cx.arc(ax-s*9,ay-s*65,s*5,0,Math.PI*2);cx.fill();
+  cx.beginPath();cx.arc(ax+s*9,ay-s*65,s*5,0,Math.PI*2);cx.fill();
+  cx.fillStyle='#111';
+  cx.beginPath();cx.arc(ax-s*9,ay-s*65,s*2.5,0,Math.PI*2);cx.fill();
+  cx.beginPath();cx.arc(ax+s*9,ay-s*65,s*2.5,0,Math.PI*2);cx.fill();
+  cx.globalAlpha=1;
+}
+
+function drawBrainShape(bx,by,bw,bh,col,alpha,lineW){
+  const cx=iCX;
+  cx.globalAlpha=alpha;
+  cx.strokeStyle=col; cx.lineWidth=lineW;
+  cx.fillStyle='rgba(10,20,40,0.6)';
+  // Same walnut brain path as HUD icon, scaled to bw/bh
+  const sx=bw*0.5, sy=bh*0.5;
+  cx.beginPath();
+  cx.moveTo(bx-sx*0.16,by+sy*0.84);
+  cx.bezierCurveTo(bx-sx*0.22,by+sy,bx-sx*0.70,by+sy*0.80,bx-sx*0.96,by+sy*0.24);
+  cx.bezierCurveTo(bx-sx*1.10,by-sy*0.06,bx-sx*1.05,by-sy*0.78,bx-sx*0.66,by-sy*0.98);
+  cx.bezierCurveTo(bx-sx*0.44,by-sy*1.10,bx-sx*0.14,by-sy*1.12,bx,by-sy*1.08);
+  cx.bezierCurveTo(bx+sx*0.14,by-sy*1.12,bx+sx*0.44,by-sy*1.10,bx+sx*0.66,by-sy*0.98);
+  cx.bezierCurveTo(bx+sx*1.05,by-sy*0.78,bx+sx*1.10,by-sy*0.06,bx+sx*0.96,by+sy*0.24);
+  cx.bezierCurveTo(bx+sx*0.70,by+sy*0.80,bx+sx*0.22,by+sy,bx+sx*0.16,by+sy*0.84);
+  cx.bezierCurveTo(bx+sx*0.11,by+sy*0.96,bx-sx*0.11,by+sy*0.96,bx-sx*0.16,by+sy*0.84);
+  cx.closePath(); cx.fill(); cx.stroke();
+  cx.globalAlpha=1;
+}
+
+function drawHandCursor(hx,hy,alpha){
+  const cx=iCX;
+  const s=Math.min(iW,iH)*0.12;
+  cx.globalAlpha=alpha;
+  cx.strokeStyle='rgba(255,255,255,.9)'; cx.lineWidth=2.5;
+  cx.fillStyle='rgba(255,255,255,.15)';
+  // Palm
+  cx.beginPath();cx.ellipse(hx,hy+s*0.4,s*0.38,s*0.32,0,0,Math.PI*2);cx.fill();cx.stroke();
+  // Index finger pointing down
+  cx.beginPath();
+  cx.moveTo(hx-s*0.06,hy+s*0.1);
+  cx.lineTo(hx-s*0.1,hy-s*0.5);
+  cx.quadraticCurveTo(hx,hy-s*0.72,hx+s*0.1,hy-s*0.5);
+  cx.lineTo(hx+s*0.06,hy+s*0.1);
+  cx.closePath(); cx.fill(); cx.stroke();
+  // Other fingers curled
+  cx.fillStyle='rgba(255,255,255,.2)';
+  cx.strokeStyle='rgba(255,255,255,.6)';
+  [-0.32,-0.22,0.22,0.32].forEach((dx,i)=>{
+    const fy=hy+s*(0.05+i*0.04);
+    cx.beginPath();
+    cx.ellipse(hx+dx*s,fy,s*0.09,s*0.18,dx*0.3,0,Math.PI*2);
+    cx.fill(); cx.stroke();
+  });
+  cx.globalAlpha=1;
+}
+
+// ──── PHASE DRAWERS ────────────────────────────────────────────
+
+function iDrawPhase0(tMs){
+  const t=tMs/1000;
+  const prog=Math.min(1,tMs/IPH_DUR[0]);
+  const cx=iCX;
+  
+  // Scanline bg
+  cx.fillStyle='#030810';
+  cx.fillRect(0,0,iW,iH);
+  for(let y=0;y<iH;y+=5){cx.fillStyle='rgba(0,0,0,.08)';cx.fillRect(0,y,iW,2);}
+
+  // Person — slightly to left of center, slightly below mid
+  const px=iW*0.5, py=iH*0.55;
+  const s=Math.min(iW,iH)*0.0055;
+  drawPerson(px,py,s,Math.min(1,tMs/600));
+
+  // Word particles burst outward from head
+  if(tMs>300){
+    if(iParts.length===0) spawnBurstWords(px,py-s*80);
+    iParts.forEach(p=>{
+      p.progress=Math.min(1,p.progress+p.speed*(16/1000)*5);
+      const ex=p.x+(p.tx-p.x)*p.progress;
+      const ey=p.y+(p.ty-p.y)*p.progress;
+      const fade=p.progress<0.8?1:1-(p.progress-0.8)/0.2;
+      cx.globalAlpha=fade*Math.min(1,tMs/500);
+      cx.fillStyle=p.col;
+      cx.font=`bold ${p.size}px monospace`;
+      cx.textAlign='center';
+      cx.shadowColor=p.col; cx.shadowBlur=6;
+      cx.fillText(p.word,ex,ey);
+      cx.shadowBlur=0;
+      cx.globalAlpha=1;
+    });
+  }
+  
+  // "IT'S TOO MANY CHOICES!" text
+  if(tMs>500){
+    const yell=Math.min(1,(tMs-500)/800);
+    cx.globalAlpha=yell;
+    cx.fillStyle='#FF5252';
+    cx.font=`bold ${Math.min(iW*0.062,26)}px monospace`;
+    cx.textAlign='center';
+    cx.shadowColor='#FF2020'; cx.shadowBlur=16+Math.sin(t*12)*6;
+    cx.fillText("IT'S TOO MANY CHOICES!",iW/2,iH*0.14);
+    cx.shadowBlur=0; cx.globalAlpha=1;
+  }
+
+  // Sub text
+  if(tMs>1800){
+    const sub=Math.min(1,(tMs-1800)/600);
+    cx.globalAlpha=sub*0.6;
+    cx.fillStyle='#aaa';
+    cx.font=`${Math.min(iW*0.030,12)}px monospace`;
+    cx.fillText('— tap anywhere to skip —',iW/2,iH*0.94);
+    cx.globalAlpha=1;
+  }
+
+  // Transition fade-out at end of phase
+  if(tMs>IPH_DUR[0]-500){
+    const fade=(tMs-(IPH_DUR[0]-500))/500;
+    cx.globalAlpha=Math.min(1,fade);
+    cx.fillStyle='#000';
+    cx.fillRect(0,0,iW,iH);
+    cx.globalAlpha=1;
+  }
+}
+
+function iDrawPhase1(tMs){
+  const t=tMs/1000;
+  const prog=Math.min(1,tMs/IPH_DUR[1]);
+  const cx=iCX;
+
+  cx.fillStyle='#030810';cx.fillRect(0,0,iW,iH);
+
+  // Brain zooms in from small to full
+  const scl=0.18+prog*0.82;
+  const bw=Math.min(iW*0.52,200)*scl;
+  const bh=bw*0.78;
+  const bx=iW/2, by=iH*0.42;
+  
+  // Neural glow rings
+  const glowR=bw*1.6+Math.sin(t*2)*12;
+  const grd=cx.createRadialGradient(bx,by,bw*0.4,bx,by,glowR);
+  grd.addColorStop(0,'rgba(79,195,247,0.18)');
+  grd.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=grd; cx.fillRect(0,0,iW,iH);
+
+  drawBrainShape(bx,by,bw,bh,'rgba(79,195,247,0.9)',prog,2);
+
+  // "ZOOMING INTO YOUR BRAIN..." 
+  const textA=Math.min(1,tMs/800);
+  cx.globalAlpha=textA*(1-(Math.max(0,tMs-IPH_DUR[1]+800)/800));
+  cx.fillStyle='#4FC3F7';
+  cx.font=`bold ${Math.min(iW*0.048,20)}px monospace`;
+  cx.textAlign='center';
+  cx.shadowColor='#4FC3F7'; cx.shadowBlur=10;
+  cx.fillText('ZOOMING INTO YOUR BRAIN...',iW/2,iH*0.82);
+  cx.shadowBlur=0; cx.globalAlpha=1;
+
+  // MIND REAL ESTATE title appears
+  if(tMs>1200){
+    const ta=(tMs-1200)/800;
+    cx.globalAlpha=Math.min(1,ta);
+    cx.fillStyle='#fff';
+    cx.font=`700 ${Math.min(iW*0.062,28)}px monospace`;
+    cx.letterSpacing='0.3em';
+    cx.fillText('MIND REAL ESTATE',iW/2,iH*0.12);
+    cx.globalAlpha=1;
+  }
+
+  if(tMs>IPH_DUR[1]-500){
+    const fade=(tMs-(IPH_DUR[1]-500))/500;
+    cx.globalAlpha=Math.min(1,fade);cx.fillStyle='#000';
+    cx.fillRect(0,0,iW,iH);cx.globalAlpha=1;
+  }
+}
+
+// ─── INTRO PHASE 2: Brain-galaxy ─────────────────────────────────────
+// Large EMPTY brain in center. Habit words float ALL AROUND it outside.
+// Mini brain icons fill the deep background (Images 1&2 reference).
+// No count labels — pure visual.
+const INTRO_WORDS=[
+  'Procrastination','Overanalysis','Complacency','Perfectionism',
+  'Fear of Failure','Trading Time','Emotional Reactivity','Over-Engineering',
+  'Identity Loss','Imposter Syndrome','Scope Creep','Distraction',
+  'Martyrdom','Overthinking','Self-Limitation','Rigid Planning',
+  'Analysis Paralysis','Under-pricing','Brain Stagnation','Technical Debt'
+];
+
+function iDrawPhase2(tMs){
+  const t=tMs/1000;
+  const cx=iCX;
+  cx.fillStyle='#020810';cx.fillRect(0,0,iW,iH);
+
+  const bx=iW/2, by=iH*0.44;
+  const bw=Math.min(iW*0.46,180), bh=bw*0.82;
+  const appear=Math.min(1,tMs/1000);
+
+  // ── Deep-background: mini brain icons scattered (Images 1 & 2) ──
+  for(let i=0;i<30;i++){
+    const bgi_x=iW*(0.04+Math.sin(i*1.9+0.4)*0.46+0.46);
+    const bgi_y=iH*(0.04+Math.cos(i*1.6+0.9)*0.46+0.46);
+    const bgi_sz=(7+Math.sin(i*0.8)*3)*appear;
+    const bgi_col=(['#64E682','#4FC3F7','#FFC832','#CE93D8'])[i%4];
+    const bgi_a=appear*(0.18+Math.sin(t*0.5+i)*0.07);
+    cx.save();
+    cx.globalAlpha=bgi_a;
+    cx.strokeStyle=bgi_col;cx.lineWidth=0.9;
+    cx.shadowColor=bgi_col;cx.shadowBlur=bgi_sz;
+    const bs=bgi_sz*0.45;
+    const nx=bgi_x+Math.sin(t*0.3+i)*3;
+    const ny=bgi_y+Math.cos(t*0.25+i)*2;
+    // Tiny brain walnut
+    cx.beginPath();
+    cx.moveTo(nx-bs*0.16,ny+bs*0.84);
+    cx.bezierCurveTo(nx-bs*0.22,ny+bs,nx-bs*0.70,ny+bs*0.80,nx-bs*0.96,ny+bs*0.24);
+    cx.bezierCurveTo(nx-bs*1.10,ny-bs*0.06,nx-bs*1.05,ny-bs*0.78,nx-bs*0.66,ny-bs*0.98);
+    cx.bezierCurveTo(nx-bs*0.44,ny-bs*1.10,nx-bs*0.14,ny-bs*1.12,nx,ny-bs*1.08);
+    cx.bezierCurveTo(nx+bs*0.14,ny-bs*1.12,nx+bs*0.44,ny-bs*1.10,nx+bs*0.66,ny-bs*0.98);
+    cx.bezierCurveTo(nx+bs*1.05,ny-bs*0.78,nx+bs*1.10,ny-bs*0.06,nx+bs*0.96,ny+bs*0.24);
+    cx.bezierCurveTo(nx+bs*0.70,ny+bs*0.80,nx+bs*0.22,ny+bs,nx+bs*0.16,ny+bs*0.84);
+    cx.bezierCurveTo(nx+bs*0.10,ny+bs*0.96,nx-bs*0.10,ny+bs*0.96,nx-bs*0.16,ny+bs*0.84);
+    cx.closePath();cx.stroke();
+    cx.restore();
+  }
+
+  // ── HABIT WORDS floating in orbit OUTSIDE the brain ──
+  const wordRx=bw*1.45, wordRy=bh*1.55; // orbit ellipse, outside the brain
+  INTRO_WORDS.forEach((word,i)=>{
+    const a=appear*Math.min(1,(tMs-i*60)/500);
+    if(a<=0)return;
+    const angle=(i/INTRO_WORDS.length)*Math.PI*2+(t*0.18);
+    // Slight wobble so each word drifts independently
+    const wobble=Math.sin(t*0.4+i*0.7)*0.04;
+    const wx=bx+Math.cos(angle+wobble)*wordRx;
+    const wy=by+Math.sin(angle+wobble)*wordRy;
+    const isRed=i%3!==0;
+    const wCol=isRed?'#FF6B6B':'#FF9999';
+    cx.save();
+    cx.globalAlpha=a*0.85;
+    // Word box
+    cx.font=`bold ${Math.min(iW*0.024,10)}px monospace`;
+    const tw=cx.measureText(word).width+10;
+    cx.fillStyle='rgba(255,60,60,0.12)';
+    cx.strokeStyle=wCol+'88';cx.lineWidth=0.9;
+    cx.beginPath();cx.roundRect(wx-tw/2,wy-8,tw,16,3);cx.fill();cx.stroke();
+    cx.fillStyle=wCol;
+    cx.textAlign='center';
+    cx.shadowColor=wCol;cx.shadowBlur=6;
+    cx.fillText(word,wx,wy+4);
+    cx.shadowBlur=0;
+    cx.restore();
+  });
+
+  // ── Faint neural lines from words toward brain center ──
+  cx.save();
+  INTRO_WORDS.forEach((w,i)=>{
+    const a=appear*0.12;
+    const angle=(i/INTRO_WORDS.length)*Math.PI*2+(t*0.18);
+    const wx=bx+Math.cos(angle)*wordRx;
+    const wy=by+Math.sin(angle)*wordRy;
+    cx.globalAlpha=a;
+    cx.strokeStyle='rgba(255,120,80,.6)';cx.lineWidth=0.5;
+    cx.beginPath();cx.moveTo(wx,wy);cx.lineTo(bx,by);cx.stroke();
+  });
+  cx.globalAlpha=1;cx.restore();
+
+  // ── EMPTY brain in center (just the outline — no words, no water) ──
+  drawBrainShape(bx,by,bw,bh,'rgba(79,195,247,0.80)',appear*0.92,1.6);
+
+  if(tMs>IPH_DUR[2]-500){
+    const fade=(tMs-(IPH_DUR[2]-500))/500;
+    cx.globalAlpha=Math.min(1,fade);cx.fillStyle='#000';
+    cx.fillRect(0,0,iW,iH);cx.globalAlpha=1;
+  }
+}
+
+// ─── INTRO PHASE 3: Zoom in, hand grabs a word from OUTSIDE ─────────
+// Brain zooms larger. Words orbit outside and CONVERGE inward.
+// Giant hand finger descends and GRABS one word from outside the brain.
+// Brain stays empty. No count labels.
+function iDrawPhase3(tMs){
+  const t=tMs/1000;
+  const cx=iCX;
+  cx.fillStyle='#030810';cx.fillRect(0,0,iW,iH);
+
+  // Zoom: brain grows from 1× to 1.65× over the phase
+  const zoomProg=Math.min(1,tMs/IPH_DUR[3]);
+  const zoom=1+zoomProg*0.65;
+  const bx=iW/2, by=iH*0.44;
+  const bwBase=Math.min(iW*0.46,180);
+  const bw=bwBase*zoom, bh=bwBase*0.82*zoom;
+
+  // Word orbit shrinks with zoom (words close IN toward brain edges)
+  // At zoom=1: orbit at 1.45× brain size; at zoom=1.65: 1.15× (closer)
+  const orbitScale=1.45-zoomProg*0.30;
+  const wordRx=bw*orbitScale, wordRy=bh*orbitScale;
+
+  // Which word the hand grabs (word at top-right of orbit)
+  const grabIdx=3; // "Perfectionism"
+  const grabAngle=(grabIdx/INTRO_WORDS.length)*Math.PI*2+(t*0.18);
+  const grabWx=bx+Math.cos(grabAngle)*wordRx;
+  const grabWy=by+Math.sin(grabAngle)*wordRy;
+
+  // Hand animation: appears at t=1000ms, descends to grabWx,grabWy, grabs at 2200ms
+  const grabTime=2200;
+  let handAlpha=0, handX=iW*0.5, handY=-150;
+  if(tMs>800){
+    handAlpha=Math.min(1,(tMs-800)/500);
+    const descProg=Math.min(1,(tMs-800)/(grabTime-800));
+    // Hand follows the grab word position
+    handX=grabWx;
+    handY=-150+(grabWy+50-(-150))*descProg;
+  }
+  const grabbed=tMs>grabTime;
+
+  // ── Neural background lines ──
+  cx.save();
+  INTRO_WORDS.forEach((w,i)=>{
+    if(i===grabIdx&&grabbed)return;
+    const angle=(i/INTRO_WORDS.length)*Math.PI*2+(t*0.18);
+    const wx=bx+Math.cos(angle)*wordRx, wy=by+Math.sin(angle)*wordRy;
+    cx.globalAlpha=0.08;cx.strokeStyle='rgba(255,100,60,.6)';cx.lineWidth=0.5;
+    cx.beginPath();cx.moveTo(wx,wy);cx.lineTo(bx,by);cx.stroke();
+  });
+  cx.globalAlpha=1;cx.restore();
+
+  // ── EMPTY brain outline (no words inside) ──
+  drawBrainShape(bx,by,bw,bh,'rgba(79,195,247,0.85)',0.92,1.8);
+
+  // ── Words orbiting OUTSIDE ──
+  INTRO_WORDS.forEach((word,i)=>{
+    const isGrabbed=i===grabIdx&&grabbed;
+    const angle=(i/INTRO_WORDS.length)*Math.PI*2+(t*0.18);
+    let wx=bx+Math.cos(angle)*wordRx;
+    let wy=by+Math.sin(angle)*wordRy;
+
+    if(isGrabbed){
+      // Grabbed word: yanked toward hand, glowing bright
+      wx=handX; wy=handY+60;
+    }
+
+    // Fade out non-grabbed words near end of phase
+    const fadeOut=zoomProg>0.80?1-(zoomProg-0.80)/0.20:0;
+    const baseAlpha=isGrabbed?1:(1-fadeOut);
+    if(baseAlpha<=0.01)return;
+
+    const wCol=isGrabbed?'#FFC832':'#FF6B6B';
+    cx.save();
+    cx.globalAlpha=baseAlpha*(isGrabbed?1:0.85);
+    cx.font=`bold ${Math.min(iW*0.024,10)}px monospace`;
+    const tw=cx.measureText(word).width+10;
+    cx.fillStyle=isGrabbed?'rgba(255,200,50,0.22)':'rgba(255,60,60,0.12)';
+    cx.strokeStyle=wCol+(isGrabbed?'FF':'88');cx.lineWidth=isGrabbed?1.4:0.9;
+    cx.shadowColor=wCol;cx.shadowBlur=isGrabbed?18:4;
+    cx.beginPath();cx.roundRect(wx-tw/2,wy-8,tw,16,3);cx.fill();cx.stroke();
+    cx.fillStyle=wCol;cx.textAlign='center';
+    cx.shadowBlur=isGrabbed?12:4;
+    cx.fillText(word,wx,wy+4);
+    cx.shadowBlur=0;cx.restore();
+  });
+
+  // ── Hand cursor grabs the word from outside the brain ──
+  if(tMs>800) drawHandCursor(handX,handY,handAlpha);
+
+  // ── Bright glow on grabbed word spot ──
+  if(grabbed){
+    cx.save();
+    cx.globalAlpha=Math.min(1,(tMs-grabTime)/300)*0.6;
+    const g=cx.createRadialGradient(grabWx,grabWy,0,grabWx,grabWy,60);
+    g.addColorStop(0,'rgba(255,200,50,.5)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=g;cx.fillRect(grabWx-60,grabWy-60,120,120);
+    cx.restore();
+  }
+
+  if(tMs>IPH_DUR[3]-600){
+    const fade=(tMs-(IPH_DUR[3]-600))/600;
+    cx.globalAlpha=Math.min(1,fade);cx.fillStyle='#000';
+    cx.fillRect(0,0,iW,iH);cx.globalAlpha=1;
+  }
+}
+
+
+function iDrawPhase4(tMs){
+  const t=tMs/1000;
+  const cx=iCX;
+  // Fade to black and then disappear → reveal category select
+  const fadeOut=Math.min(1,tMs/800);
+  cx.fillStyle=`rgba(0,0,0,${1-fadeOut*0.5})`;
+  cx.fillRect(0,0,iW,iH);
+  if(tMs>1200){
+    // Start revealing the game canvas
+    endIntro();
+  }
+}
+
+function endIntro(){
+  if(!iRunning)return;
+  iRunning=false;
+  cancelAnimationFrame(_iRAF);
+  iCV.classList.add('gone');
+  // Show category selection
+  document.getElementById('intro').classList.remove('gone');
+}
+
+function introTick(now){
+  if(!iRunning)return;
+  const dt=Math.min(50,now-iPrev);
+  iPrev=now;
+  iT+=dt;
+  // Phase advance
+  if(iT>IPH_DUR[iPhase]){
+    iPhase++;
+    iT=0;
+    iParts=[];
+    if(iPhase>4){endIntro();return;}
+  }
+  // Draw current phase
+  if(iPhase===0) iDrawPhase0(iT);
+  else if(iPhase===1) iDrawPhase1(iT);
+  else if(iPhase===2) iDrawPhase2(iT);
+  else if(iPhase===3) iDrawPhase3(iT);
+  else if(iPhase===4) iDrawPhase4(iT);
+  _iRAF=requestAnimationFrame(introTick);
+}
+
+// Skip on tap
+iCV.addEventListener('click',endIntro);
+iCV.addEventListener('touchstart',endIntro,{passive:true});
+
+// Kick off
+resizeIntro();
+addEventListener('resize',resizeIntro);
+iPrev=performance.now();
+_iRAF=requestAnimationFrame(introTick);
+// ═══════════════════════════════════════════════════════════════
+// END INTRO ENGINE
+// ═══════════════════════════════════════════════════════════════
+
 const cv=document.getElementById('g');
 const cx=cv.getContext('2d');
 let W=0,H=0,DPR=1;
@@ -253,18 +942,27 @@ function resize(){
   cv.width=W*DPR;cv.height=H*DPR;
   cv.style.width=W+'px';cv.style.height=H+'px';
   cx.setTransform(DPR,0,0,DPR,0,0);
-  L.HC=H*0.20;
-  L.HW=Math.min(W*0.94,400);
-  L.HH=Math.min(H*0.28,220);
-  L.HEXIT=L.HC+L.HH*0.42;
-  L.BY=H*0.50;
-  L.BR=Math.min(W*0.18,80);
-  L.BT=H*0.60;
-  // Brain bottom sits above the flow bar (flow bar appears just below brain)
-  L.BB=H*0.88;
+  // ── NEW SINGLE-SCREEN LAYOUT ──
+  // Lightbulb + choices at very top. Brain fills the entire bottom.
+  // No camera scrolling — everything visible on one screen.
+  L.HC=H*0.06;     // Housing source (off-screen, unused visually)
+  L.HW=Math.min(W*0.80,320);
+  L.HH=Math.min(H*0.10,60);
+  L.HEXIT=L.HC+L.HH*0.5;
+  L.BY=H*0.13;     // Brain-bulb icon near very top
+  L.BR=Math.min(W*0.055,32);  // Icon radius (bigger brain-in-bulb)
+  // Brain container fills the entire bottom portion
+  L.BT=H*0.24;     // Brain top — just below choices
+  L.BB=H*0.91;     // Brain fills to near bottom of screen
   L.BCX=W/2;
-  L.BHW=Math.min(W*0.46,260);
-  L.WH=H+10;
+  // Brain is WIDE — side boxes are 11% of screen each
+  // Brain width: keep clear of side boxes (SBW + 14px gap on each side)
+  L.BHW=Math.min(W/2-L.SBW-14, 175);
+  // Side box geometry
+  L.SBXL=4;
+  L.SBXR=W-Math.min(W*0.115,68)-4;
+  L.SBW=Math.min(W*0.115,68);
+  L.WH=H;
   rebuildWalls();
   if(typeof initBgNeurons==='function')initBgNeurons();
 }
@@ -276,33 +974,99 @@ function clampCam(){if(cam.y<0)cam.y=0;const m=maxScroll();if(cam.y>m)cam.y=m;}
 
 // ---------- Physics ----------
 const eng=Engine.create();
-eng.world.gravity.y=1.0;
+eng.world.gravity.y=1.4;  // stronger gravity fills the bottom
 eng.positionIterations=8;
 let walls=[];
 function rebuildWalls(){
   if(walls.length){walls.forEach(w=>Composite.remove(eng.world,w));}
   walls=[];
   const c=L.BCX,hw=L.BHW,t=80,top=L.BT,bot=L.BB;
-  // EXTRA THICK floor positioned INSIDE the brain so items cannot penetrate
-  // Floor sits 4px above the brain bottom edge for visual containment
-  walls.push(Bodies.rectangle(c,bot-2,hw*4,t,{isStatic:true,label:'floor',
-    friction:.95,restitution:0}));
-  // Full-height side walls — placed slightly INSIDE the brain edge to contain everything
-  const wallH=bot-top+t*2+400;
-  walls.push(Bodies.rectangle(c-hw-t/2+8,(top+bot)/2,t,wallH,{isStatic:true,label:'wall',
-    friction:.8,restitution:0}));
-  walls.push(Bodies.rectangle(c+hw+t/2-8,(top+bot)/2,t,wallH,{isStatic:true,label:'wall',
-    friction:.8,restitution:0}));
-  // Diagonal corner ramps at the bottom corners so items slide to center
-  walls.push(Bodies.rectangle(c-hw+22,bot-12,40,16,{isStatic:true,label:'wall',
-    angle:-0.45,friction:.9,restitution:0}));
-  walls.push(Bodies.rectangle(c+hw-22,bot-12,40,16,{isStatic:true,label:'wall',
-    angle:0.45,friction:.9,restitution:0}));
-  // SAFETY NET — invisible floor far below the brain to catch any rogue items
-  walls.push(Bodies.rectangle(c,bot+200,W*4,40,{isStatic:true,label:'safetynet',
-    friction:.5,restitution:0}));
+  // ── FOLD RAMP PHYSICS ──────────────────────────────────────────────
+  // Zigzag angled ramps matching the visual brain fold lines.
+  // Words fall from ABOVE the brain, bounce off these ramps, and stack
+  // at the bottom — exactly like the Tetris/brain images reference.
+  // NO ceiling so words can freely enter from the top.
+  const bh=bot-top;
+  const rampOpts={isStatic:true,friction:0.65,restitution:0.35,label:'fold'};
+
+  // Each entry: {yFrac, xOffsetFrac, widthFrac, angleDeg}
+  // xOffset = 0 means centered; positive = shifted right, negative = left
+  // Width covers a portion of brain width (gaps let words fall through)
+  const FOLD_RAMPS=[
+    // Steep angles for vacuum-tube cascade — words slide sharply downward
+    {y:0.14, xOff:-0.10, w:0.55, deg: 22},  // steep rightward slope
+    {y:0.28, xOff: 0.10, w:0.55, deg:-22},  // steep leftward slope
+    {y:0.42, xOff:-0.08, w:0.52, deg: 18},
+    {y:0.56, xOff: 0.08, w:0.52, deg:-18},
+    {y:0.70, xOff: 0.00, w:0.46, deg:  9},  // center funnel, gentle slope
+  ];
+
+  state.pegPins=[];   // repurpose as fold ramp positions for visual
+  state.pinFlashes={}; // flash tracking
+
+
+  FOLD_RAMPS.forEach((r,i)=>{
+    const ry=top+bh*r.y;
+    const rx=c+hw*r.xOff;
+    const rw=hw*r.w*2;
+    const rh=10;
+    const ang=r.deg*Math.PI/180;
+    const rampBody=Bodies.rectangle(rx,ry,rw,rh,{...rampOpts,angle:ang});
+    rampBody._pinIdx=i;
+    walls.push(rampBody);
+    state.pegPins.push({x:rx,y:ry,w:rw,h:rh,ang:ang,idx:i});
+  });
+
+  // ── SOLID CONTAINER: floor + side walls — NO words escape ──
+  const containerOpts={isStatic:true,friction:0.80,restitution:0.04};
+  walls.push(Bodies.rectangle(c,       bot+t*0.5, hw*3,        t,           {...containerOpts,label:'floor'}));
+  walls.push(Bodies.rectangle(c-hw-t/2,(top+bot)/2,t,(bot-top)+t*2,          {...containerOpts,label:'wall'}));
+  walls.push(Bodies.rectangle(c+hw+t/2,(top+bot)/2,t,(bot-top)+t*2,          {...containerOpts,label:'wall'}));
+
+  // ═══ BASKETS: 2 per side, positioned between the side boxes ═══
+  // Each basket = 3 static walls (U-shape opening upward toward brain center)
+  const BK_W=38, BK_H=30, BK_T=5;  // basket width, depth, wall thickness
+  const basketOpts={isStatic:true,friction:0.85,restitution:0.05,label:'basket'};
+  const bkBH=bh;
+  // Upper baskets at ~30% brain height, lower at ~62%
+  const bkYs=[top+bkBH*0.30, top+bkBH*0.62];
+  state.baskets=[];
+
+  bkYs.forEach((by,bi)=>{
+    const isTop=(bi===0);  // top baskets are open-bottomed (vacuum tube pass-through)
+    const lbx=c-hw+2;
+    const rbx=c+hw-BK_W-2;
+
+    if(isTop){
+      // ── TOP BASKETS: open bottom = vacuum-tube chute ──
+      // Only 2 side walls (like a funnel/guide) — NO floor, words flow straight through.
+      // Left: back wall + shorter front guide
+      walls.push(Bodies.rectangle(lbx+BK_T/2,     by+BK_H/2,    BK_T, BK_H,   {...basketOpts}));
+      walls.push(Bodies.rectangle(lbx+BK_W-BK_T/2,by+BK_H*0.35, BK_T, BK_H*0.7,{...basketOpts}));
+      state.baskets.push({x:lbx,y:by,w:BK_W,h:BK_H,side:'L',idx:bi,open:true});
+      // Right: back wall + shorter front guide
+      walls.push(Bodies.rectangle(rbx+BK_W-BK_T/2,by+BK_H/2,    BK_T, BK_H,   {...basketOpts}));
+      walls.push(Bodies.rectangle(rbx+BK_T/2,      by+BK_H*0.35, BK_T, BK_H*0.7,{...basketOpts}));
+      state.baskets.push({x:rbx,y:by,w:BK_W,h:BK_H,side:'R',idx:bi,open:true});
+    }else{
+      // ── BOTTOM BASKETS: solid U-shape — words are caught and fill from here ──
+      // Left
+      walls.push(Bodies.rectangle(lbx+BK_T/2,     by+BK_H/2,       BK_T, BK_H,   {...basketOpts}));
+      walls.push(Bodies.rectangle(lbx+BK_W/2,     by+BK_H-BK_T/2,  BK_W, BK_T,   {...basketOpts}));
+      walls.push(Bodies.rectangle(lbx+BK_W-BK_T/2,by+BK_H/2+4,     BK_T, BK_H-8, {...basketOpts}));
+      state.baskets.push({x:lbx,y:by,w:BK_W,h:BK_H,side:'L',idx:bi,open:false});
+      // Right
+      walls.push(Bodies.rectangle(rbx+BK_W-BK_T/2,by+BK_H/2,       BK_T, BK_H,   {...basketOpts}));
+      walls.push(Bodies.rectangle(rbx+BK_W/2,     by+BK_H-BK_T/2,  BK_W, BK_T,   {...basketOpts}));
+      walls.push(Bodies.rectangle(rbx+BK_T/2,     by+BK_H/2+4,     BK_T, BK_H-8, {...basketOpts}));
+      state.baskets.push({x:rbx,y:by,w:BK_W,h:BK_H,side:'R',idx:bi,open:false});
+    }
+  });
+
   Composite.add(eng.world,walls);
 }
+
+
 
 // ---------- Word bank ----------
 // 100 words per category, using exact wording from the master blueprint.
@@ -830,540 +1594,290 @@ Identity Lock Work Bias|🐚
 Terminal Completion Delay|⚓`;
 
 // Parse all category lists
-const QUANTUM_WORDS=parseList(QUANTUM_RAW);
-const SELFEMP_WORDS=parseList(SELFEMP_RAW);
-const PARENTING_WORDS=parseList(PARENTING_RAW);
-const ENGINEERING_WORDS=parseList(ENGINEERING_RAW);
-const RETIREMENT_WORDS=parseList(RETIREMENT_RAW);
+const QUANTUM_WORDS=parseList(`
+Complacency|😴
+Overanalysis|🔍
+Procrastination|⏰
+Imposter Syndrome|🎭
+Fear of Failure|😨
+Skepticism|🤔
+Short-term Focus|📅
+Distraction|📱
+Perfectionism|💎
+Rigid Planning|📋
+Analysis Paralysis|🔄
+Self-Limitation|🧱
+Status Quo Bias|⚖️
+Fixed Mindset|🔒
+Risk Aversion|🛡️
+Comfort Seeking|🛋️
+Goal Avoidance|🏃
+Overthinking|💭
+Hesitation|⏸️
+Self-Sabotage|💣
+Tunnel Vision|🔭
+Small Thinking|📦
+Inaction|🪨
+Dream Deferral|💤
+Playing Small|🐣`);
 
-// POSITIVE WORDS — per category, each with an effect type:
-//   'water' = water drop (single hit)
-//   'wave'  = wave burst (ripple)
-//   'shock' = shock wave (push neighbors out)
-function parsePos(raw){
-  return raw.trim().split('\n').map(line=>{
-    const parts=line.split('|');
-    return{name:parts[0].trim(),effect:(parts[1]||'water').trim()};
-  });
-}
+const QUANTUM_POS_RAW=`
+Audacity|⚡
+Decisiveness|✅
+Momentum|🚀
+Self-Congruence|🧭
+Courage|🦁
+Optimism|☀️
+Visionary Thinking|🔭
+Hyper-Focus|🎯
+Iterative Speed|⚙️
+Fluidity|🌊
+Bold Action|💪
+Clarity|💡
+Drive|🔥
+Purpose|🧿
+Growth Mindset|🌱
+Risk Appetite|🎲
+Innovation|💫
+Adaptability|🦋
+Execution|⚔️
+Alignment|🧲
+Deep Work|📖
+Flow State|✨
+Strategic Patience|🕰️
+Systems Thinking|🔗
+Compound Action|📈`;
 
-const QUANTUM_POS_RAW=`Audacity|water
-Decisiveness|water
-Momentum|wave
-Self-Congruence|shock
-Courage|shock
-Optimism|shock
-Visionary Thinking|wave
-Hyper-Focus|wave
-Iterative Speed|water
-Fluidity|water
-Self-Referencing|shock
-Merit-Mindset|shock
-Synergy|wave
-Calculated Risk|shock
-Macro-Delegation|wave
-Readiness|water
-Conviction|shock
-Sustainability|wave
-Strategic Precision|water
-Receptivity|water
-Innovation|shock
-Abundance Mindset|shock
-Persistence|wave
-Autonomy|shock
-Simplicity|water
-Futurism|wave
-Possibility-Thinking|shock
-Open-Mindedness|water
-Solution-Sourcing|wave
-Self-Validation|shock
-Streamlining|water
-Targeting|water
-Ascension|wave
-Inspiration|shock
-Adaptability|water
-Systemization|wave
-Macro-Vision|wave
-Under-Promising|water
-Aggressive Execution|shock
-Hyper-Specificity|water
-Radical Accountability|shock
-Capital Leverage|wave
-High-Output|wave
-Boldness|shock
-Strategic Trust|wave
-Present-Focus|water
-Pragmatism|water
-Asset-Leverage|wave
-Ecosystem-Integration|wave
-All-In Commitment|shock
-Macro-Leverage|wave
-Intentional Projection|wave
-Obsession|shock
-Thick-Skin|shock
-Agnosticism|water
-Laser-Convergence|water
-Growth Mindset|shock
-Player-Mindset|shock
-Grounded Boldness|shock
-Self-Reliance|shock
-Radical Transparency|shock
-Process-Love|water
-Infinite Horizon|wave
-Instant Capture|water
-Presence|water
-Relentless Rhythm|wave
-Performance-Focus|wave
-Integrity-Speed|water
-Silent Execution|water
-Velocity-First|wave
-Design-Mindset|wave
-Origination|shock
-High-Impact Action|shock
-Dominance-Mindset|shock
-Exponential Patience|wave
-Core-Congruence|shock
-Peripheral Awareness|wave
-Time-Compression|wave
-Uncompromising Excellence|shock
-Audience-Agnosticism|shock
-Mental Rewriting|water
-Discomfort-Adaptation|shock
-Macro-Scaling|wave
-Resourcefulness|water
-Energy-Management|water
-Decisive Strike|shock
-Aggressive Reinvestment|wave
-Alliance-Building|wave
-Due Diligence|water
-Tech-Leverage|wave
-High-Efficiency|water
-Active Implementation|wave
-Intellectual Humility|water
-Stoic Execution|water
-Root-Cause Analysis|water
-Minimum Viable Launch|water
-Blitzscaling|wave
-Deterministic Action|shock
-Identity-Shifting|shock
-The Grand Leap|shock`;
+const SELFEMP_WORDS=parseList(`
+Trading Time|⏱️
+Martyrdom|⚰️
+Feast-or-Famine|📊
+Under-pricing|💸
+Scope Creep|🌊
+Bad Retention|🔄
+Tax Procrastination|📋
+Imposter Pricing|🎭
+Shiny Object Syndrome|✨
+Burnout Seeking|🪫
+Client Dependency|🔗
+Revenue Stagnation|📉
+Networking Avoidance|🚫
+Proposal Weakness|📄
+Follow-up Neglect|🔕
+Solo Hero Syndrome|🦸
+Revenue Leaks|💧
+Brand Neglect|👻
+Niche Confusion|🌀
+Value Erosion|⬇️
+Accountability Gap|🕳️
+Content Drought|🏜️
+Market Blindness|🙈
+Overhead Bloat|🏋️
+Portfolio Stagnation|📁`);
 
-const SELFEMP_POS_RAW=`Value-Based Pricing|shock
-Strategic Out-Sourcing|wave
-Pipeline Management|wave
-Premium Positioning|shock
-Strict Boundary Setting|water
-Client Vetting|water
-Proactive Accounting|water
-Data-Backed Offers|water
-CEO Days|wave
-Monolithic Focus|wave
-Ironclad Agreements|water
-Value Stacking|wave
-Paid Audits|water
-Automated Billing|water
-Paid Client Acquisition|wave
-Pipeline Automation|wave
-Deep Work Blocks|wave
-Productized Services|wave
-Virtual Assistance|wave
-Ecosystem Community|wave
-Capital Runway|wave
-Communication Guardrails|water
-Hyper-Niche Specialization|water
-Recurring Retainers|wave
-High-Leverage Output|wave
-Authority Building|shock
-Outbound Prospecting|wave
-Asset Investment|wave
-Corporate Separation|shock
-Milestone Specificity|water
-Direct Cash Focus|shock
-Client Diversification|wave
-Planned Recovery|water
-Qualification Filters|water
-Calendar Links|water
-Beta Testing|water
-Market Intelligence|water
-Stoic Pipelines|wave
-Standard Operating Manuals|wave
-Relentless Cadence|wave
-Buffer Scheduling|water
-Batch Processing|water
-Category Design|shock
-Monthly Lean Audit|water
-Outbound Leaps|shock
-Continuous Pipeline|wave
-Equal-Stature Posture|shock
-Escrow Delivery|water
-Just-in-Time Learning|water
-Rapid Market Testing|water
-Risk Mitigation|water
-Value Assertiveness|shock
-Welcome Automation|water
-Identity Triggers|shock
-Core Competency Focus|wave
-Automated Nurture|wave
-Volume Desensitization|shock
-Hard Expiration|water
-Silent Quoting|water
-Cloud Architecture|wave
-Annual Rate Adjustments|shock
-Reinvestment Reserve|wave
-Conversion Tracking|water
-Pre-Call Auditing|water
-Testimonial Extraction|water
-Time-Theming|wave
-Prescriptive Authority|shock
-Bootstrapping Velocity|wave
-Conversational Selling|water
-Predictive Accounting|water
-Market Insularity|wave
-Transparent Ledger|water
-Unit Economics|water
-Market Validation|water
-Agnostic Rate Standard|shock
-Zapier Infrastructure|wave
-Speed-to-Lead|water
-One-Page Close|water
-Fractional Operations|wave
-High-Intent Networking|wave
-Clean Slate Auditing|shock
-Redundant Backup|water
-High-Ticket Engineering|wave
-Boundary Enforcement|water
-Energy Conservation|water
-Proactive Delegation|wave
-Escrow Allocation|water
-Surgical Positioning|shock
-Clawback Agreements|water
-AI Pipeline Leverage|wave
-Under-Promise Over-Deliver|water
-Closing Audits|water
-Lean Efficiency|water
-Objective Resolution|water
-Foundational Design|wave
-Minimum Viable Service|water
-Frictionless Lead Capture|water
-Algorithmic Outbound|wave
-Enterprise Mindset|shock
-The Grand Launch|shock`;
+const SELFEMP_POS_RAW=`
+Value Pricing|💎
+Strategic Out-Sourcing|🤝
+Pipeline Mgmt|🔧
+Premium Positioning|🏆
+Strict Boundary Setting|🛑
+Client Vetting|✅
+Proactive Accounting|💼
+Passive Income|💰
+Thought Leadership|🧠
+System Building|⚙️
+Recurring Revenue|♻️
+Referral Network|🕸️
+Strategic Delegation|📋
+IP Creation|🔑
+Offer Clarity|🎯
+Portfolio Expansion|📈
+Time Auditing|⏱️
+Accountability Pairing|🤜
+Content Strategy|📣
+Niche Authority|👑
+Leverage Points|🏗️
+Capacity Planning|📐
+Encore Revenue|💫
+Exit Strategy|🚀
+Revenue Architecture|🏛️`;
 
-const PARENTING_POS_RAW=`The Mindful Pause|water
-Conscious Pattern-Breaking|shock
-Developmental Realism|water
-Strategic Self-Care|water
-White-Space Protection|wave
-Engaged Connection|wave
-Individual Appreciating|water
-Presence Over Presents|shock
-Autonomy Support|wave
-Predictable Guardrails|wave
-Present-Moment Anchoring|water
-Behavior Separation|water
-Clear Objective Requests|water
-Village Activation|wave
-Active Validation|water
-Child-Centric Focus|wave
-Unconditional Attachment|shock
-Separated Identity|shock
-Root-Cause Investigation|water
-Child-Led Exploration|wave
-Rupture and Repair|shock
-Buffer Transitions|water
-Measured Consequences|water
-Neurological Empathy|water
-Unified Front Core|wave
-Modern-Day Attunement|water
-Transient Mindset|shock
-Rational Boundary Setting|water
-Joy-Spotting|water
-Managed Risk Exposure|wave
-Radical Simplicity|shock
-Family Core Blueprint|wave
-Quality Over Quantity|shock
-Clean-Slate Individualism|shock
-Personal Preservation|water
-Centralized Calendar|wave
-Long-Term Character Focus|wave
-Intrinsic Motivation|wave
-Intuitive Grounding|water
-Surgical Directives|water
-Stress-Expression Theory|water
-Balanced Allocation|wave
-Proactive Attention|wave
-Loving Authority|shock
-Flexibility Tolerance|water
-The Clean Sheet|shock
-Open-Door Culture|wave
-Positive Reinforcement|wave
-Social Integration|wave
-Immersive Micro-Blocks|wave
-Macroscopic Acceptance|shock
-Statistical Grounding|water
-Curious Interviewing|water
-Co-Regulation|wave
-Interest Bridging|wave
-The Core Three|water
-Effort-Based Praise|water
-Ownership Leadership|shock
-Continuous Safety Checking|water
-Rock-Solid Core|shock
-Healthy Modeling|wave
-Creative Redesign|wave
-Adolescent Availability|wave
-Gracious Acceptance|water
-Decompression Boundary|water
-Circadian Structure|wave
-Curated Archives|water
-Contextual Transparency|water
-Immediate Action|shock
-Vetted Exploration|wave
-Long-Game Horizon|wave
-Authentic Unfolding|wave
-True Present Connection|water
-Trust-Based Dialogue|wave
-Calm System Building|wave
-Private Alignment|wave
-Wholistic Character Design|wave
-Scaffolded Responsibility|wave
-Dignified Respect|shock
-Natural Release|shock
-Fresh Morning Policy|shock
-Nutritional Integrity|water
-Contribution Culture|wave
-Unconditional Support|shock
-Energy Boundary|water
-Proactive Conversations|wave
-Temporal Boundaries|water
-Intergenerational Weaving|wave
-Objective Verification|water
-Digital Literacy Mentoring|wave
-Wellness Modeling|wave
-Full Visual Connection|water
-Authentic Expression|shock
-The Emotional Anchor|shock
-Deep Mental Checking|water
-Clear Frameworks|water
-Reliable Lifeline Status|shock
-Deliberate Legacy Design|wave
-Adaptive Leadership|wave
-The Present Legacy|shock`;
+const PARENTING_WORDS=parseList(`
+Emotional Reactivity|😤
+Generational Copying|🔁
+Perfectionist Expectations|💎
+Parental Martyrdom|⚰️
+Over-Scheduling|📅
+Screen-Time Subbing|📱
+Comparison Traps|⚖️
+Helicopter Parenting|🚁
+Emotional Absence|🕳️
+Inconsistency|🎲
+Guilt Parenting|😔
+Reward Overuse|🍬
+Criticism Loops|🔄
+Boundary Collapse|💥
+Shame Tactics|☠️
+Over-Protecting|🫶
+Harsh Discipline|🔨
+Passive Parenting|🪨
+Need Neglect|🔕
+Achievement Pressure|🏅
+Emotional Dumping|🗑️
+Exhaustion Mode|🪫
+Sibling Inequality|⚖️
+Argument Escalation|📈
+Routine Chaos|🌀`);
 
-const ENGINEERING_POS_RAW=`Occams Architecture|wave
-Open-Source Clarity|wave
-Functional Validation|water
-Clean-Code Discipline|water
-Leveraged Integration|wave
-Specification Control|water
-Agnostic Tool Selection|shock
-Rapid Prototyping|wave
-Stress-Test Architecture|shock
-First-Principles Derivation|shock
-Empirical Load Simulation|wave
-Git Architecture|wave
-Root-Cause Analysis|water
-Framework Utilization|wave
-Continuous Integration|wave
-Security-by-Design|shock
-Infrastructure Migration|wave
-Test-Driven Safety Nets|wave
-Semantic Precision|water
-Egoless Peer Verification|shock
-Dynamic Configuration|wave
-Resource-Conscious Modeling|water
-Lean Utility Execution|water
-Interoperable Syncing|wave
-Cognitive Reset Protocol|water
-Debt Sprints|wave
-Fault-Tolerant Planning|wave
-Toolchain Evaluation|water
-Radical Telemetry|shock
-Local Integrity Audits|water
-Lean Dependency Mapping|water
-Immutable Specifications|water
-Phased Canary Rollouts|wave
-Collaborative Convergence|wave
-Agile Pivot Mechanics|wave
-Unified Asset Architecture|wave
-10x Scale Projections|shock
-Proof-of-Concept Benchmarks|water
-Sandbox Execution|water
-Self-Documenting Architecture|wave
-Containerized Determinism|water
-Compute Investment|wave
-Performance Profiling|water
-Scripted Automation|wave
-Decoupled Architecture|wave
-Pipeline Modernization|wave
-Deep Security Audits|water
-Bottleneck Targeting|water
-Contract-First Development|water
-High-Fidelity Asserts|water
-Complexity Auditing|water
-Automated Rollbacks|wave
-Ruthless Code Pruning|shock
-Blameless Post-Mortems|shock
-Pragmatic Prototyping|wave
-Stack Standardization|wave
-Incremental Refactoring|water
-Self-Documenting Code|wave
-Staging Simulation|wave
-Cloud-Agnostic Containers|wave
-Cross-Functional Mapping|wave
-Boilerplate Generation|water
-Performance Budgeting|water
-Diagnostic Profiling|water
-Structured Ingestion|water
-Code Linter Rules|water
-Overhead Minimization|water
-Thread-Safe Paradigms|water
-Executable Blueprints|wave
-Automated Compliance|wave
-Deterministic Testing|water
-Right-Sized Infrastructure|water
-High-Impact Efficiency|wave
-Dependency Injection|wave
-Breakpoint Isolation|water
-Hardware-In-The-Loop|wave
-End-to-End Tracking|water
-Time-Compressed Iteration|wave
-Inline Annotation|water
-Version Lifecycle Tracking|water
-Trace Log Injection|water
-Sanitized Input Structuring|water
-Stateless Scaling Design|wave
-Open-Source Leverage|shock
-Deployment Validation|wave
-Status Portals|wave
-Deterministic Collection|water
-Community Integration|wave
-Independent Benchmarking|water
-AI Acceleration|wave
-Sustainable Engineering|wave
-Line-by-Line Verification|water
-Global Standard Alignment|wave
-Objective Exception Handling|water
-Heap Dump Allocation|water
-Strict MVP Cuts|shock
-Chat Integration|water
-Comprehensive Testing|wave
-Polyglot Engineering|shock
-The Production Deployment|shock`;
+const PARENTING_POS_RAW=`
+Mindful Pause|🧘
+Conscious Pattern-Breaking|🔓
+Developmental Realism|📏
+Strategic Self-Care|🛁
+White-Space Protection|🕊️
+Engaged Connection|❤️
+Repair Conversations|🩹
+Consistent Rituals|⏰
+Active Listening|👂
+Emotional Validation|💙
+Natural Consequences|🌿
+Collaborative Problem-Solving|🤝
+Secure Attachment|🫂
+Age-Appropriate Freedom|🦋
+Growth Praise|🌱
+Modeling Resilience|💪
+Playful Presence|🎉
+Boundary Clarity|🛑
+Needs Attunement|🎵
+Conflict Resolution|☮️
+Quality Time|⌛
+Shared Values|🧭
+Emotional Coaching|🗣️
+Family Culture|🏠
+Interest Mirroring|🪞`;
 
-const RETIREMENT_POS_RAW=`Purpose Redefinition|shock
-Strategic Distribution|wave
-Functional Vitality|water
-Community Weaving|wave
-Fluid Structure|water
-Cognitive Exploration|wave
-Future-Facing Curiosity|wave
-Wellness Management|water
-Immediate Execution|shock
-Mindful Presence|water
-Transparent Auditing|water
-Financial Boundaries|water
-Surgical Selection|water
-Spatial Freedom|shock
-Coordinated Autonomy|wave
-High-Velocity Intent|wave
-Longevity Design|wave
-Creative Creation|shock
-Intergenerational Mentoring|wave
-Mathematical Safety|water
-Active Production|wave
-Clean Slate Living|shock
-Tech Optimization|water
-Value-Add Presence|water
-The Final Great Leap|shock
-Dividend Focus|wave
-Optimized Longevity|wave
-Youthful Adaptability|water
-Variable Budgeting|water
-Self-Sustaining Worth|shock
-Frictionless Adventure|wave
-Micro-Mission Mapping|water
-Earned Utility|water
-Macro-Contentment|shock
-Scientific Compliance|water
-Legacy Architecture|wave
-Vetted Compound Growth|wave
-Intentional Availability|water
-Singular Strategy|wave
-Generational Blueprinting|wave
-Environment Forcing|shock
-Quality Allocation|water
-Intellectual Friction|water
-Micro-Boldness|shock
-Complete Severance|shock
-Present Maximization|water
-Healthcare Budgeting|water
-Asset Optimization|wave
-Grace-First Alignment|shock
-Immersive Execution|wave
-Macro-Project Management|wave
-Data-Backed Safe Rates|water
-Dignified Presentation|water
-Fluid Acceptance|water
-Frictionless Tools|water
-Linear Project Closure|water
-Neuroplasticity Practice|water
-Internal Control|wave
-Calculated Safety|water
-Self-Sourcing Fulfillment|shock
-Proactive Lifestyle Design|wave
-Curious Tracking|water
-Infinite Learning Curve|wave
-Open Peer Onboarding|wave
-Time-Theming Structure|wave
-Pristine Ledger Tracking|water
-Minimalist Decoupling|shock
-Culinary Mastery|water
-Dynamic Dialogue|water
-Modified Execution|water
-Proactive Reconciliation|water
-Custom Lifestyle Engineering|wave
-Immersive Recovery|wave
-Educated Defense|water
-Patience Integration|water
-Geographic Arbitrage|wave
-Inflation-Protected Stacking|wave
-Circadian Alignment|water
-Curated Circle Standards|water
-Anchored Self-Worth|shock
-Forward Movement|wave
-Local Engagement|wave
-Macro Net-Worth Calm|shock
-Alternative Mobility|wave
-Sensory Immersion|water
-Leveraged Outsourcing|wave
-Delayed Luxury Pacing|water
-Visual Linking|water
-Empirical Vetting|water
-Automated Piping|wave
-Boundary-Driven Giving|water
-Fee Transparency|shock
-Mechanical Leverage|wave
-Stoic Body Acceptance|shock
-Lifestyle Modification|shock
-Lean Skill Acquisition|water
-Proactive Social Leadership|wave
-Functional Movement|water
-Fluid Horizon Mindset|wave
-The Grand Renaissance|shock`;
+const ENGINEERING_WORDS=parseList(`
+Over-Engineering|🏗️
+Silo Architecture|🏢
+Premature Optimization|⚡
+Technical Debt|⚓
+Not Invented Here|🛡️
+Scope Creep|🌊
+Golden Hammer|🔨
+Analysis Paralysis|🔄
+Ignoring Edge Cases|🕳️
+Copy-Paste Culture|📋
+Documentation Neglect|📚
+Test Coverage Gaps|🩺
+Deployment Fear|😨
+Refactor Avoidance|🚫
+Knowledge Hoarding|🔒
+Dependency Bloat|🏋️
+Security Neglect|🔓
+Architecture Ego|👑
+Microservice Sprawl|🕸️
+Bus Factor Risk|🚌
+Sprint Overcommit|📅
+Code Review Theatre|🎭
+Design Pattern Misuse|🔧
+Performance Blind Spots|🙈
+Integration Avoidance|🚷`);
 
+const ENGINEERING_POS_RAW=`
+Occams Architecture|⚡
+Open-Source Clarity|🔓
+Functional Validation|✅
+Clean-Code Discipline|🧹
+Leveraged Integration|🔗
+Specification Control|📐
+Test-Driven Dev|🧪
+Documentation Culture|📖
+Pair Programming|👥
+Iterative Refactoring|♻️
+Dependency Pruning|✂️
+Security-First Mindset|🔐
+Performance Budgeting|📊
+API Design Clarity|🎯
+Knowledge Sharing|💡
+Minimal Viable Solution|🎯
+Code Review Quality|👁️
+Modular Design|🧩
+Observability|📡
+Automated Testing|🤖
+Deployment Confidence|🚀
+Feedback Loops|🔄
+Architectural Review|🏛️
+Technical Alignment|🧲
+Debt Reduction|📉`;
+
+const RETIREMENT_WORDS=parseList(`
+Identity Loss|🪞
+Spending Freeze|❄️
+Sedentary Lifestyle|🛋️
+Social Isolation|🏝️
+Routine Collapse|💥
+Brain Stagnation|🧱
+Living in Retrospect|⏪
+Hypochondria Focus|🩺
+Purpose Vacuum|🕳️
+Relevance Loss|📉
+Connection Drought|🏜️
+Energy Decline|🪫
+Learning Plateau|📊
+Financial Anxiety|💸
+Boredom Loops|🔄
+Contribution Absence|🚫
+Legacy Neglect|📦
+Cognitive Withdrawal|🧠
+Excitement Deficit|😐
+Health Avoidance|🙈
+Meaning Void|🌑
+Community Absence|🏚️
+Gratitude Gap|🕳️
+Skill Atrophy|⬇️
+Adaptation Resistance|🛡️`);
+
+const RETIREMENT_POS_RAW=`
+Purpose Redefinition|🧭
+Strategic Distribution|💼
+Functional Vitality|💪
+Community Weaving|🕸️
+Fluid Structure|🌊
+Cognitive Exploration|🔭
+Wellness Mgmt|🏃
+Encore Career|🎯
+Lifelong Learning|📚
+Social Architecture|🏗️
+Contribution Design|🎁
+Legacy Building|🏛️
+Vitality Habits|✨
+Financial Strategy|📈
+Meaningful Projects|🔥
+Health Investment|💊
+Mentorship Giving|🤝
+Creative Expression|🎨
+Adventure Planning|🗺️
+Relationship Deepening|❤️
+Portfolio Living|💫
+Gratitude Practice|🙏
+Wisdom Sharing|💎
+Experience Leveraging|⚡
+Second Act Launch|🚀`;
+
+function parsePos(raw){ return raw.trim().split('\n').map(l=>{ const p=l.split('|'); return {name:p[0].trim(),emoji:(p[1]||'').trim()}; }); }
 const QUANTUM_POS=parsePos(QUANTUM_POS_RAW);
 const SELFEMP_POS=parsePos(SELFEMP_POS_RAW);
 const PARENTING_POS=parsePos(PARENTING_POS_RAW);
 const ENGINEERING_POS=parsePos(ENGINEERING_POS_RAW);
 const RETIREMENT_POS=parsePos(RETIREMENT_POS_RAW);
 
+
 const CATEGORY_DATA={
-  quantum:{label:'quantum leap',     words:QUANTUM_WORDS,     pos:QUANTUM_POS},
-  self:{label:'self-employment',     words:SELFEMP_WORDS,     pos:SELFEMP_POS},
-  parenting:{label:'parenting',      words:PARENTING_WORDS,   pos:PARENTING_POS},
-  engineer:{label:'engineering',     words:ENGINEERING_WORDS, pos:ENGINEERING_POS},
-  senior:{label:'retirement',        words:RETIREMENT_WORDS,  pos:RETIREMENT_POS}
+  quantum:{label:'⚡ SALIENCE NETWORK',     words:QUANTUM_WORDS,     pos:QUANTUM_POS},
+  self:{label:'🌙 DEFAULT MODE',            words:SELFEMP_WORDS,     pos:SELFEMP_POS},
+  parenting:{label:'🎯 ATTENTION NETWORKS', words:PARENTING_WORDS,   pos:PARENTING_POS},
+  engineer:{label:'🧩 EXECUTIVE CONTROL',   words:ENGINEERING_WORDS, pos:ENGINEERING_POS},
+  senior:{label:'💎 REWARD NETWORK',        words:RETIREMENT_WORDS,  pos:RETIREMENT_POS}
 };
 
 // Build emoji map per category for quick lookup
@@ -1410,7 +1924,7 @@ const COL={line:'#fff',dim:'rgba(255,255,255,.4)',faint:'rgba(255,255,255,.15)',
   red:'#FF5252',water:'#4FC3F7',breath:'#B3E5FC',sand:'#C9A86A',sky:'#FFB347'};
 
 // ---------- Helpers ----------
-function bo(e){return Object.assign({restitution:.18,friction:.55,frictionAir:.012,density:.0012},e||{});}
+function bo(e){return Object.assign({restitution:.40,friction:.28,frictionAir:.022,density:.0012},e||{});}
 function T(b,fn){cx.save();cx.translate(b.position.x,b.position.y);cx.rotate(b.angle);fn();cx.restore();}
 function ns(){cx.strokeStyle=COL.line;cx.fillStyle='rgba(0,0,0,.7)';cx.lineWidth=1.6;}
 
@@ -2710,11 +3224,17 @@ const EMOJI_DRAW={
 };
 
 // Draw the shape in B&W lines. No fills, no color.
-function dShapeLine(b,emoji){
+function dShapeLine(b,emoji,kind){
   T(b,()=>{
-    cx.strokeStyle='#fff';
-    cx.fillStyle='#fff';
-    cx.lineWidth=1.5;
+    // Color shapes by kind: cyan glow for positives, red glow for negatives
+    const isPos=kind==='pos';
+    const col=isPos?'#4FC3F7':'#FF5252';
+    const glow=isPos?'rgba(79,195,247,.85)':'rgba(255,82,82,.85)';
+    cx.shadowColor=glow;
+    cx.shadowBlur=10;
+    cx.strokeStyle=col;
+    cx.fillStyle=col;
+    cx.lineWidth=1.6;
     cx.lineCap='round';
     cx.lineJoin='round';
     const fn=EMOJI_DRAW[emoji];
@@ -2726,6 +3246,7 @@ function dShapeLine(b,emoji){
       cx.beginPath();cx.moveTo(-4,-2);cx.lineTo(4,-2);
       cx.moveTo(-4,2);cx.lineTo(4,2);cx.stroke();
     }
+    cx.shadowBlur=0;
   });
 }
 
@@ -2741,7 +3262,7 @@ function registerLineShape(word,emoji,isPos){
       bo(isPos?
         {density:.0008,friction:.05,frictionAir:.02,restitution:.4,label:'pos:water'}:
         {label:'neg'})),
-    draw:(b)=>dShapeLine(b,emoji),
+    draw:(b)=>dShapeLine(b,emoji,isPos?'pos':'neg'),
     emoji:emoji
   };
 }
@@ -2836,7 +3357,22 @@ const state={
   flow:0,           // overall flow level (water level) 0..1
   hitWater:0,       // water from hits (3 hits worth = 0.15)
   missWater:0,      // water from misses (1 drop worth = 0.02)
-  round:0
+  round:0,
+  burnoutIntensity:0,  // 0..1 — red overload tint strength during PH.FULL
+  burnoutShake:0,      // 0..1 — screen-shake amount, decays each frame
+  brainShake:0,        // 0..1 — HUD brain icon red-shake when negative spawns, decays fast
+  erases:0,            // running tally of negatives the player has cleared
+  procCooldown:0,      // ms before procrastinate button can be tapped again
+  procBonus:false,     // true after procrastinate: next CHOICE forces 2 positives
+  positiveStreak:0,    // counts positives consumed; every 3 fires an auto-zap
+  zapPending:false,    // true between streak hitting 3 and zap firing
+  // Personality judgment — fills based on choice patterns
+  personality:{
+    fighter:0,   // positives chosen + zaps fired
+    dreamer:0,   // core mindfulness habits (water, breathing, cleaning)
+    quitter:0,   // negatives accepted into the brain
+    rebel:0      // procrastinate presses + chaos-seeking
+  }
 };
 
 // ---------- Round flow ----------
@@ -2896,7 +3432,33 @@ function populateHousing(){
 function startRound(){
   state.round++;
   populateHousing();
-  const [w1,w2]=pickPair();
+  let w1,w2;
+  if(state.procBonus){
+    // After PROCRASTINATE: reward player with 2 positive words to help fight back
+    state.procBonus=false;
+    const d=CATEGORY_DATA[state.category];
+    const posPool=[];
+    d.pos.forEach(p=>posPool.push(p.name));
+    CORE_POS.forEach(w=>posPool.push(w));
+    shuffleArray(posPool);
+    w1=posPool[0];
+    w2=posPool[1]||posPool[0]; // fallback if pool tiny
+    // Flash a "2x BOOST" popup
+    const sp=document.getElementById('streakPopup');
+    if(sp){
+      sp.textContent='2× BOOST!';
+      sp.style['-webkit-text-fill-color']='#4FC3F7';
+      sp.style.filter='drop-shadow(0 0 16px rgba(79,195,247,.9))';
+      sp.style.opacity='1';
+      sp.style.transform='translateX(-50%) scale(1.1)';
+      setTimeout(()=>{
+        sp.style.opacity='0';sp.style.transform='translateX(-50%) scale(0.8)';
+        sp.style['-webkit-text-fill-color']='';sp.style.filter='';
+      },1200);
+    }
+  }else{
+    [w1,w2]=pickPair();
+  }
   // Both start from housing exit, then split toward left/right of bulb (wide spread)
   state.falling=[
     {word:w1,kind:kindOf(w1),x:W*0.5,y:L.HEXIT,vy:0,target:W*0.27},
@@ -2909,11 +3471,24 @@ function startRound(){
 
 function updHUD(){
   document.getElementById('cat').textContent=CATEGORY_DATA[state.category].label;
+  // Color HUD label to match the active brain network
+  const _nCol={quantum:'#FF69B4',self:'#B464FF',parenting:'#40C4FF',engineer:'#64E682',senior:'#FFC832'};
+  document.getElementById('cat').style.color=_nCol[state.category]||'rgba(79,195,247,.7)';
+  document.getElementById('cat').style.textShadow=`0 0 12px ${_nCol[state.category]||'#4FC3F7'}88`;
   document.getElementById('ph').textContent={intro:'pick',show:'thinking',eject:'releasing',
     fall:'falling',choice:'choose',drag:'drag to brain',settle:'settling',full:'overflow'}[state.phase]||'·';
   const flowPct=Math.min(100,Math.round(state.flow*100));
   document.getElementById('pct').textContent=flowPct+'%';
   document.getElementById('fill').style.width=flowPct+'%';
+  // Erase counter — number of negatives cleared, formatted as 4-digit pad
+  const ec=document.getElementById('eraseCount');
+  if(ec)ec.textContent='CLEARED '+String(state.erases).padStart(4,'0');
+  // Show or hide procrastinate button based on phase
+  const pb=document.getElementById('procBtn');
+  if(pb&&pb.classList&&pb.classList.toggle){
+    const active=state.phase!==PH.INTRO&&state.phase!==PH.FULL;
+    pb.classList.toggle('show',active);
+  }
   // Position the flow bar just below the brain
   const hudBot=document.getElementById('hudBot');
   if(L.BB){
@@ -2926,15 +3501,18 @@ let streakPopTimer=null;
 function showStreakPopup(n){
   const el=document.getElementById('streakPopup');
   if(!el)return;
-  // Tier labels for chained hits
+  // Big COMBO X[n] style label
   let label;
-  if(n===2)label='nice · x2';
-  else if(n===3)label='flow · x3';
-  else if(n===4)label='mindful · x4';
-  else if(n===5)label='zen · x5';
-  else if(n>=6)label='enlightened · x'+n;
+  if(n===2)label='COMBO X2';
+  else if(n===3)label='COMBO X3';
+  else if(n===4)label='MINDFUL X4';
+  else if(n===5)label='ZEN X5';
+  else if(n>=6)label='ENLIGHTENED X'+n;
   else return;
   el.textContent=label;
+  el.classList.remove('pop');
+  // force reflow so animation restarts even if already showing
+  void el.offsetWidth;
   el.classList.add('pop');
   if(streakPopTimer)clearTimeout(streakPopTimer);
   streakPopTimer=setTimeout(()=>{el.classList.remove('pop');},900);
@@ -2985,6 +3563,10 @@ function tickPhase(dt){
       f.vy+=1.4*(dt/16.67);
       f.y+=f.vy*(dt/16.67);
       f.x+=(f.target-f.x)*0.12;
+      // Track motion trail (last 5 positions for ghosting effect)
+      if(!f.trail)f.trail=[];
+      f.trail.push({x:f.x,y:f.y});
+      if(f.trail.length>6)f.trail.shift();
     });
     if(state.falling.every(f=>f.y>=targetY)){
       state.falling.forEach(f=>{f.y=targetY;f.vy=0;});
@@ -2994,8 +3576,11 @@ function tickPhase(dt){
       updHUD();
     }
   }else if(state.phase===PH.SETTLE){
-    const allSettled=state.shapes.length===0||state.shapes.every(s=>s.dead||Math.abs(s.body.velocity.y)<0.6);
-    if(allSettled&&state.t>1200){
+    const allSettled=state.shapes.length===0||state.shapes.every(s=>{
+      if(s.dead)return true;
+      return Math.hypot(s.body.velocity.x,s.body.velocity.y)<0.55;
+    });
+    if(allSettled&&state.t>1800){  // longer wait lets Peggle bouncing fully settle
       // Check for overflow
       const overflow=state.shapes.some(s=>!s.dead&&s.body.position.y<L.BT-10);
       if(overflow){triggerFull();}else{startRound();}
@@ -3014,32 +3599,170 @@ function updateFlow(){
 }
 
 // ---------- Shape spawning ----------
+// Negatives drift weightlessly around the container. Positives never enter physics
+// at all — they are handled by consumePositive() instead, which adds water and
+// counts toward the auto-zap streak.
 function spawnShape(word,x,y,vx,vy){
   const def=S[word];if(!def)return null;
-  const body=def.body(x,y);
-  Body.setVelocity(body,{x:(vx||0)*0.6,y:(vy||0)*0.6+1});
-  Composite.add(eng.world,body);
-  const s={body,def,word,hits:0,dead:false,kind:def.kind,age:0};
-  state.shapes.push(s);
-  // Trigger atmospheric synapse spark in background neurons
-  sparkBgAt(x,y,100);
-  // Negatives ALSO add water — half as much as positives, because they take up space
-  if(def.kind==='neg'){
-    state.missWater=Math.min(1,state.missWater+0.025);
-    updateFlow();
+  if(def.kind==='pos'){
+    // PEGGLE: positives also become falling physics balls.
+    // They bounce through the pins and consume when they hit a negative OR reach the floor.
+    const pBody=Bodies.circle(x,y,9,{density:.0014,friction:.12,frictionAir:.018,
+      restitution:.55,label:'pos:fall'});
+    pBody.gravityScale=1;
+    Body.setVelocity(pBody,{x:(Math.random()-0.5)*1.4, y:0.8+(vy||0)*0.15});
+    Composite.add(eng.world,pBody);
+    const POS_BLOCK_COLS=['#00ACC1','#43A047','#1E88E5','#FDD835','#00897B','#7CB342','#0288D1','#26A69A'];
+    const posColor=POS_BLOCK_COLS[Math.floor(Math.random()*POS_BLOCK_COLS.length)];
+    const ps={body:pBody,def,word,hits:0,dead:false,kind:'pos',
+              age:0,floatPhase:0,floatSpeed:0,color:posColor};
+    state.shapes.push(ps);
+    sparkBgAt(x,y,80);
+    // Increment fighter personality
+    state.personality.fighter+=0.5;
+    return ps;
   }
+  // ── HEXAGON BODY — rolls and tumbles as it bounces off brain fold lines ──
+  // Hexagons spin naturally, creating a rolling cascade effect that fills the bottom.
+  // Icosagon size scales with word length — longer/heavier negatives are bigger
+  const wordLen=(word||'').length;
+  const HEX_R=wordLen<=7?10:wordLen<=13?15:20;  // light/medium/heavy weight
+  const body=Bodies.polygon(x,y,20,HEX_R,{
+    density:0.003,       // heavy enough to fall fast and stack solidly
+    friction:0.60,       // grips fold ramps well
+    frictionAir:0.015,   // light air drag — falls firmly
+    restitution:0.20,    // very little bounce so words settle at bottom
+    label:'neg'
+  });
+  body.gravityScale=1;
+  // Give a slight random spin so each word tumbles differently
+  Body.setVelocity(body,{x:(Math.random()-0.5)*1.8, y:0.5});
+  Body.setAngularVelocity(body,(Math.random()-0.5)*0.12);
+  Composite.add(eng.world,body);
+  const NEG_COLS=['#E53935','#C62828','#AD1457','#7B1FA2','#F57C00','#BF360C','#6A1B9A','#D32F2F','#880E4F','#E64A19'];
+  const blockColor=NEG_COLS[Math.floor(Math.random()*NEG_COLS.length)];
+  const s={body,def,word,hits:0,dead:false,kind:'neg',age:0,
+           floatPhase:0,floatSpeed:0,color:blockColor,hexR:HEX_R,wordSev:HEX_R};
+  state.shapes.push(s);
+  sparkBgAt(x,y,100);
+  // Pulse the HUD brain icon red — gives tactile feedback that the brain took a hit
+  state.brainShake=Math.min(1.0, (state.brainShake||0)+0.55);
+  // --- Personality scoring ---
+  state.personality.quitter+=1;
+  // Negatives still nudge the missWater so a brain stuffed with them flirts with overflow
+  state.missWater=Math.min(1,state.missWater+0.025);
+  updateFlow();
   return s;
+}
+
+// ---------- Positive consumption (new mechanic) ----------
+// Called when the player drops a positive word over the container. Adds water,
+// emits a splash burst, and counts toward the every-three-positives auto-zap.
+function consumePositive(word,x,y){
+  // Add a bigger chunk of water than the old per-hit amount, since each positive
+  // is "spent" entirely rather than slowly chipping at negatives.
+  state.hitWater=Math.min(1,state.hitWater+0.10);
+  updateFlow();
+  // Splash particles — cyan droplets bursting outward from the drop point
+  for(let i=0;i<18;i++){
+    const a=Math.random()*Math.PI*2,sp=1.5+Math.random()*3;
+    state.fx.push({type:'burst',x,y,
+      vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,
+      life:700,maxLife:700,c:'#4FC3F7',size:2+Math.random()*2});
+  }
+  // Twin cyan shockwave rings
+  state.fx.push({type:'ring',x,y,r:0,maxR:55,life:500,maxLife:500,c:'#4FC3F7',lw:2});
+  state.fx.push({type:'ring',x,y,r:0,maxR:95,life:700,maxLife:700,c:'#B3E5FC',lw:1.2});
+  sparkBgAt(x,y,160);
+  // Streak progression — every third positive arms a lightning zap
+  state.positiveStreak++;
+  if(state.positiveStreak>=3&&!state.zapPending){
+    state.zapPending=true;
+    setTimeout(triggerZap,260); // brief beat so the player feels the build-up
+  }
+  // --- Personality scoring ---
+  state.personality.fighter+=1;
+  // Dreamer: core mindfulness habits score extra
+  if(CORE_POS.includes(word)) state.personality.dreamer+=2.5;
+  else state.personality.dreamer+=0.4;
+}
+
+// ---------- Auto-zap (lightbulb shoots at a floating negative) ----------
+function triggerZap(){
+  state.zapPending=false;
+  state.positiveStreak=0;
+  // Find a living negative to zap (closest to the lightbulb gets priority for visual clarity)
+  const lives=state.shapes.filter(s=>!s.dead&&s.kind==='neg');
+  if(lives.length===0)return;
+  // Sort by distance from bulb so the zap doesn't traverse the whole screen
+  const bx=W/2,by=L.BY;
+  lives.sort((a,b)=>{
+    const da=Math.hypot(a.body.position.x-bx,a.body.position.y-by);
+    const db=Math.hypot(b.body.position.x-bx,b.body.position.y-by);
+    return da-db;
+  });
+  // Take a random target from the top-3 closest (gives a bit of variety)
+  const target=lives[Math.floor(Math.random()*Math.min(3,lives.length))];
+  const tx=target.body.position.x,ty=target.body.position.y;
+  // Spawn the lightning beam FX
+  state.fx.push({type:'zap',x1:bx,y1:by,x2:tx,y2:ty,
+    life:520,maxLife:520,segments:buildLightningSegments(bx,by,tx,ty)});
+  // Brief screen pulse + spark on impact
+  state.screenPulse=(state.screenPulse||0)+0.6;
+  sparkBgAt(tx,ty,180);
+  // --- Personality scoring: zapping is a fighter move ---
+  state.personality.fighter+=0.8;
+  // Dissolve the target after the beam has had a moment to draw
+  setTimeout(()=>{
+    if(!target.dead)dissolve(target);
+  },220);
+}
+
+// Build a jagged lightning path between two points (used by the zap FX)
+function buildLightningSegments(x1,y1,x2,y2){
+  const segs=[{x:x1,y:y1}];
+  const steps=10;
+  const dx=x2-x1,dy=y2-y1;
+  const len=Math.hypot(dx,dy)||1;
+  const nx=-dy/len,ny=dx/len; // perpendicular for jitter
+  for(let i=1;i<steps;i++){
+    const tt=i/steps;
+    const offset=(Math.random()-0.5)*22*(1-Math.abs(tt-0.5)*1.4); // tapers at endpoints
+    segs.push({
+      x:x1+dx*tt+nx*offset,
+      y:y1+dy*tt+ny*offset
+    });
+  }
+  segs.push({x:x2,y:y2});
+  return segs;
 }
 
 function dissolve(s){
   if(s.dead)return;
   s.dead=true;
-  for(let i=0;i<12;i++){
-    state.fx.push({type:'burst',x:s.body.position.x,y:s.body.position.y,
-      vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4-1,life:600,c:COL.line});
+  // Tally cleared negatives for the HUD counter
+  if(s.kind==='neg')state.erases++;
+  const sx=s.body.position.x,sy=s.body.position.y;
+  // DRAMATIC NEON BURST: 28 colored fragments shooting outward
+  for(let i=0;i<28;i++){
+    const a=(i/28)*Math.PI*2+Math.random()*0.3;
+    const sp=2+Math.random()*5;
+    state.fx.push({type:'burst',x:sx,y:sy,
+      vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1,
+      life:900,maxLife:900,c:'#FF5252',size:2+Math.random()*2});
   }
-  // Bigger background spark on dissolve - cleansing wave
-  sparkBgAt(s.body.position.x,s.body.position.y,160);
+  // SHIMMER particles - smaller, longer life, drift slowly
+  for(let i=0;i<14;i++){
+    const a=Math.random()*Math.PI*2,sp=0.4+Math.random()*1.2;
+    state.fx.push({type:'shimmer',x:sx,y:sy,
+      vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-0.3,
+      life:1400,maxLife:1400,c:'#FFB3B3',size:1+Math.random()*1.5});
+  }
+  // TWO STACKED SHOCKWAVE RINGS — one cyan inner, one red outer
+  state.fx.push({type:'ring',x:sx,y:sy,r:0,maxR:80,life:600,maxLife:600,c:'#FF5252',lw:2.5});
+  state.fx.push({type:'ring',x:sx,y:sy,r:0,maxR:130,life:800,maxLife:800,c:'#4FC3F7',lw:1.5});
+  // Bigger background spark on dissolve - cleansing wave through neurons
+  sparkBgAt(sx,sy,200);
   Composite.remove(eng.world,s.body);
   state.hitWater=Math.min(1,state.hitWater+0.05);
   updateFlow();
@@ -3066,11 +3789,49 @@ function explodeAround(x,y,radius,strength,color){
 }
 
 // ---------- Collisions ----------
-Events.on(eng,'collisionStart',(e)=>{
-  e.pairs.forEach(p=>{
-    handlePair(p.bodyA,p.bodyB);
-    handlePair(p.bodyB,p.bodyA);
-    handleNegNeg(p.bodyA,p.bodyB);
+Events.on(eng,'collisionStart',(ev)=>{
+  ev.pairs.forEach(p=>{
+    const A=p.bodyA,B=p.bodyB;
+
+    // ── FOLD RAMP FLASH: light up brain fold line on block impact ──
+    if(A.label==='fold'||B.label==='fold'){
+      const fold=A.label==='fold'?A:B;
+      if(fold._pinIdx!==undefined) state.pinFlashes[fold._pinIdx]=performance.now();
+    }
+
+
+    // ── POSITIVE BALL hits NEGATIVE → consume positive, dissolve negative ──
+    const isPA=A.label==='pos:fall', isPB=B.label==='pos:fall';
+    const isNA=A.label==='neg',      isNB=B.label==='neg';
+    if((isPA&&isNB)||(isPB&&isNA)){
+      const posBody=isPA?A:B, negBody=isNA?A:B;
+      const posS=state.shapes.find(s=>s.body===posBody&&!s.dead);
+      const negS=state.shapes.find(s=>s.body===negBody&&!s.dead);
+      if(posS&&negS){
+        posS.dead=true;negS.dead=true;
+        Composite.remove(eng.world,posBody);Composite.remove(eng.world,negBody);
+        const px=negBody.position.x,py=negBody.position.y;
+        consumePositive(posS.word,px,py);
+        state.erases=(state.erases||0)+1;
+        if(typeof addStreakDrop==='function')addStreakDrop();
+        // Big flash at collision point
+        state.fx.push({type:'ring',x:px,y:py,r:0,maxR:70,life:500,maxLife:500,c:'#4FC3F7',lw:2.5});
+        state.screenPulse=(state.screenPulse||0)+0.4;
+        sparkBgAt(px,py,200);
+      }
+    }
+
+    // ── POSITIVE BALL hits FLOOR → consume (it fell through without hitting anything) ──
+    if((isPA||isPB)&&(A.label==='floor'||B.label==='floor')){
+      const posBody=isPA?A:B;
+      const posS=state.shapes.find(s=>s.body===posBody&&!s.dead);
+      if(posS){
+        posS.dead=true;
+        Composite.remove(eng.world,posBody);
+        // Still add some water (smaller benefit since it missed)
+        consumePositive(posS.word,posBody.position.x,posBody.position.y);
+      }
+    }
   });
 });
 function handlePair(a,b){
@@ -3089,6 +3850,10 @@ function handlePair(a,b){
       showStreakPopup(state.streak);
       // Bonus water on streak (small reward to incentivize chains)
       state.hitWater=Math.min(1,state.hitWater+0.01*Math.min(state.streak,5));
+      // Screen pulse flash on big combos (3+) — that shockwave feeling
+      if(state.streak>=3){
+        state.screenPulse=Math.min(1,(state.screenPulse||0)+0.5);
+      }
     }
     // Wave at impact - PARENTING gets triple-size wave for breath (shock wave rumbles brain)
     const col=a.label==='pos:water'?COL.water:(a.label==='pos:breath'?COL.breath:'#fff');
@@ -3140,28 +3905,58 @@ function handleNegNeg(a,b){
 }
 
 // ---------- Sway and breath force ----------
+let _lastOverloadCount=0; // track when count first crosses 10
 function tickForces(dt){
+  // OVERLOAD GRAVITY — if the brain has 10+ floating negatives, gravity progressively
+  // returns to them so they sink and stack at the bottom row as a visible warning state.
+  const liveNegs=state.shapes.filter(s=>!s.dead&&s.kind==='neg');
+  const negCount=liveNegs.length;
+  const overloadG=negCount>=10?Math.min(1,(negCount-9)*0.22):0;
+
+  // Fire the overload popup + effects ONCE when count first hits exactly 10
+  if(negCount>=10&&_lastOverloadCount<10){
+    // Streak popup reused as OVERLOAD alert
+    const sp=document.getElementById('streakPopup');
+    if(sp){
+      sp.textContent='⚠ BRAIN SATURATED';
+      sp.style.background='none';
+      sp.style['-webkit-background-clip']='unset';
+      sp.style['-webkit-text-fill-color']='#FF5252';
+      sp.style.filter='drop-shadow(0 0 18px rgba(255,60,60,.9)) drop-shadow(0 0 36px rgba(255,60,60,.5))';
+      sp.style.opacity='1';
+      sp.style.transform='translateX(-50%) scale(1.1)';
+      setTimeout(()=>{
+        sp.style.opacity='0';
+        sp.style.transform='translateX(-50%) scale(0.8)';
+        sp.style.filter='';sp.style['-webkit-text-fill-color']='';
+      },1400);
+    }
+    // Big screen shake burst
+    state.burnoutShake=Math.min(1,state.burnoutShake+0.7);
+    // Suddenly slam ALL floating negatives downward with a jolt so they stack
+    liveNegs.forEach(s=>{
+      Body.setVelocity(s.body,{x:(Math.random()-0.5)*2,y:2+Math.random()*3});
+    });
+    // Bright red flash
+    state.screenPulse=(state.screenPulse||0)+0.5;
+    state.burnoutIntensity=Math.min(1,(state.burnoutIntensity||0)+0.4);
+  }
+  _lastOverloadCount=negCount;
   state.shapes.forEach(s=>{
     if(s.dead)return;
     s.age=(s.age||0)+dt;
-    // Items sway side to side as they stack
+    // FLOATING NEGATIVE DRIFT — apply two tiny sinusoidal forces (X and Y) so each
+    // negative wanders in a slow lazy orbit. Each shape has its own phase so they
+    // PEGGLE FALLING: negatives fall with full gravity, bounce off pins
+    // No drift forces — they fall naturally. Off-screen cleanup only.
     if(s.kind==='neg'){
-      const sw=Math.sin(performance.now()*.0009+s.body.id*1.7)*0.00010*s.body.mass;
-      Body.applyForce(s.body,s.body.position,{x:sw,y:0});
+      // Ensure gravity is always on (override any old gravityScale=0)
+      if(s.body.gravityScale!==1) s.body.gravityScale=1;
     }
-    // Breath dissipates after 2.5s if it never hits anything
-    if(s.def===S['taking a deep breath']&&s.age>2500){
-      state.fx.push({type:'wave',x:s.body.position.x,y:s.body.position.y,r:0,life:500,c:COL.breath,small:true});
-      state.missWater=Math.min(1,state.missWater+0.04);
-      updateFlow();
-      Composite.remove(eng.world,s.body);
-      s.dead=true;
-    }
-    // OFF-SCREEN CLEANUP: if a negative escapes the brain bounds, just remove it (no resizing)
+    // OFF-SCREEN CLEANUP: if a shape escapes the container, remove it
     if(s.kind==='neg'&&!s.respawned){
       const py=s.body.position.y;
-      // Only remove if it goes FAR below the brain (out of play entirely)
-      if(py>L.BB+150){
+      if(py>L.BB+150||py<L.BT-150){
         s.respawned=true;
         Composite.remove(eng.world,s.body);
         s.dead=true;
@@ -3171,13 +3966,20 @@ function tickForces(dt){
 }
 
 function tickFx(dt){
+  const k=dt/16.67;
   for(let i=state.fx.length-1;i>=0;i--){
     const e=state.fx[i];e.life-=dt;
     if(e.life<=0){state.fx.splice(i,1);continue;}
     if(e.type==='burst'){
-      e.x+=e.vx*(dt/16.67);e.y+=e.vy*(dt/16.67);e.vy+=.12*(dt/16.67);
+      e.x+=e.vx*k;e.y+=e.vy*k;e.vy+=.18*k;e.vx*=0.96;
+    }else if(e.type==='shimmer'){
+      e.x+=e.vx*k;e.y+=e.vy*k;e.vy+=.04*k;e.vx*=0.97;e.vy*=0.97;
+    }else if(e.type==='ring'){
+      // Ring expands outward with eased curve
+      const t=1-(e.life/e.maxLife);
+      e.r=e.maxR*(1-Math.pow(1-t,3));
     }else if(e.type==='wave'){
-      e.r+=(dt/16.67)*(e.small?1.5:(e.tripleSize?6:2.5));
+      e.r+=k*(e.small?1.5:(e.tripleSize?6:2.5));
     }
   }
   for(let i=state.shapes.length-1;i>=0;i--){
@@ -3186,21 +3988,20 @@ function tickFx(dt){
 }
 
 // ---------- Rendering ----------
-// Animated background neural network - dots that pulse and connect with subtle lines.
-// Creates the "cognitive interior" atmosphere behind the gameplay.
+// Animated background neural network - bright cyan synapses (Gemini concept aesthetic)
 const bgNeurons=[];
 function initBgNeurons(){
   bgNeurons.length=0;
-  const count=Math.min(36,Math.floor(W*H/14000));
+  const count=Math.min(48,Math.floor(W*H/11000));
   for(let i=0;i<count;i++){
     bgNeurons.push({
       x:Math.random()*W,
       y:Math.random()*L.WH,
       vx:(Math.random()-0.5)*0.06,
       vy:(Math.random()-0.5)*0.06,
-      r:Math.random()*1.4+0.6,
-      a:Math.random()*0.18+0.05,
-      pulseSpeed:0.015+Math.random()*0.02,
+      r:Math.random()*1.6+0.8,
+      a:Math.random()*0.28+0.12,
+      pulseSpeed:0.018+Math.random()*0.022,
       pulsePhase:Math.random()*Math.PI*2,
       glow:0
     });
@@ -3209,46 +4010,52 @@ function initBgNeurons(){
 function bg(){
   cx.fillStyle='#000';cx.fillRect(0,0,W,H);
   cx.save();cx.translate(0,-cam.y);
-  // Neural network dots
+  // Bright neural dots with cyan tint
   bgNeurons.forEach(n=>{
     n.pulsePhase+=n.pulseSpeed;
     n.x+=n.vx;n.y+=n.vy;
-    // Soft wrap on edges
     if(n.x<-10)n.x=W+10;if(n.x>W+10)n.x=-10;
     if(n.y<-10)n.y=L.WH+10;if(n.y>L.WH+10)n.y=-10;
-    const alpha=Math.max(0,n.a+Math.sin(n.pulsePhase)*0.06+n.glow);
-    cx.fillStyle=n.glow>0?`rgba(79,195,247,${alpha})`:`rgba(255,255,255,${alpha})`;
+    const alpha=Math.max(0,n.a+Math.sin(n.pulsePhase)*0.08+n.glow);
+    // Subtle cyan-blue tint for all neurons (matches Gemini aesthetic)
+    const tintB=180+Math.floor(Math.sin(n.pulsePhase)*40+40);
+    cx.fillStyle=n.glow>0?`rgba(79,195,247,${alpha})`:`rgba(180,220,255,${alpha*.85})`;
+    // Glow halo around each neuron
+    cx.shadowColor=n.glow>0?'rgba(79,195,247,.9)':'rgba(150,200,255,.5)';
+    cx.shadowBlur=n.glow>0?12:5;
     cx.beginPath();cx.arc(n.x,n.y,n.r+n.glow*2,0,Math.PI*2);cx.fill();
     if(n.glow>0)n.glow=Math.max(0,n.glow-0.008);
   });
-  // Connecting lines between near neurons
-  cx.lineWidth=0.5;
+  cx.shadowBlur=0;
+  // Connecting synapse lines — brighter and bluer
+  cx.lineWidth=0.7;
   for(let i=0;i<bgNeurons.length;i++){
     const a=bgNeurons[i];
     for(let j=i+1;j<bgNeurons.length;j++){
       const b=bgNeurons[j];
       const dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy);
-      if(d<90){
-        const alpha=(1-d/90)*0.08;
+      if(d<110){
+        const alpha=(1-d/110)*0.18;
         const glowing=a.glow>0||b.glow>0;
-        cx.strokeStyle=glowing?`rgba(79,195,247,${alpha*3})`:`rgba(255,255,255,${alpha})`;
+        cx.strokeStyle=glowing?`rgba(79,195,247,${Math.min(.9,alpha*4)})`:`rgba(120,180,240,${alpha})`;
         cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();
       }
     }
   }
   cx.restore();
 }
-// Trigger a localized synapse spark at a position (called when shapes spawn or dissolve)
 function sparkBgAt(x,y,radius){
   radius=radius||120;
   bgNeurons.forEach(n=>{
     if(Math.hypot(n.x-x,n.y-y)<radius){
-      n.glow=Math.min(0.6,n.glow+0.3);
+      n.glow=Math.min(0.7,n.glow+0.35);
       const dx=n.x-x,dy=n.y-y,d=Math.hypot(dx,dy)||1;
       n.vx+=(dx/d)*0.4;n.vy+=(dy/d)*0.4;
     }
   });
 }
+
+
 function hLabel(x,y,l){
   cx.fillStyle=COL.dim;cx.font='300 9px monospace';cx.textAlign='center';
   cx.fillText(l.toUpperCase(),x,y);
@@ -3288,8 +4095,10 @@ function drawHousingWord(hw,bx,by,extraAlpha){
 
 // ---------- UNIFIED HOUSING (all 5 categories use the same emoji-grid layout) ----------
 function drawHousing(){
+  // Only show housing visuals during the intro word-float phase; hide during active gameplay
+  // to prevent decorative category boxes from cluttering the brain visualization area.
+  if(state.phase!==PH.SHOW && state.phase!==PH.EJECT) return;
   const c=W/2,cy=L.HC,w=L.HW,h=L.HH;
-  // Use original category-specific housing designs
   if(state.category==='self')hSelf(c,cy,w,h);
   else if(state.category==='parenting')hParent(c,cy,w,h);
   else if(state.category==='engineer')hSoft(c,cy,w,h);
@@ -3767,297 +4576,775 @@ function hQuantum(c,cy,w,h){
   hLabel(c,cy-h*.5,'quantum');
 }
 
-// ---------- LIGHTBULB (more bulb-like) ----------
+// ---------- LIGHTBULB (always-on bright glow like Gemini concept) ----------
 function drawBulb(){
   const c=W/2,cy=L.BY,r=L.BR;
-  // hanging wire
-  cx.strokeStyle=COL.faint;cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(c,L.HEXIT+20);cx.lineTo(c,cy-r-22);cx.stroke();
-  
-  // BASE (screw threads)
-  cx.strokeStyle=COL.line;cx.lineWidth=1.2;
-  // top of base (flat ring)
-  cx.beginPath();
-  cx.moveTo(c-14,cy-r-22);cx.lineTo(c+14,cy-r-22);
-  cx.lineTo(c+12,cy-r-18);cx.lineTo(c-12,cy-r-18);cx.closePath();cx.stroke();
-  // screw threads
-  for(let i=0;i<3;i++){
-    cx.beginPath();
-    cx.moveTo(c-12+i,cy-r-16+i*3);
-    cx.lineTo(c+12-i,cy-r-16+i*3);
-    cx.stroke();
-  }
-  // narrow neck
-  cx.beginPath();
-  cx.moveTo(c-9,cy-r-8);
-  cx.bezierCurveTo(c-9,cy-r-2,c-r*.6,cy-r*.5,c-r*.75,cy-r*.1);
-  cx.stroke();
-  cx.beginPath();
-  cx.moveTo(c+9,cy-r-8);
-  cx.bezierCurveTo(c+9,cy-r-2,c+r*.6,cy-r*.5,c+r*.75,cy-r*.1);
-  cx.stroke();
-  
-  // BULB (round teardrop, more spherical)
+  const active=(state.phase===PH.CHOICE||state.phase===PH.DRAG);
+  const t=performance.now()*.001;
+  const pulse=1+Math.sin(t*2.8)*.07;
+  const haloI=active?1.0:0.55;
+
+  cx.save();
+  // ── BRAIN-IN-LIGHTBULB (Image 5 reference) ──
+  // The glass globe
+  const globeR=r*1.05;
+  const globeY=cy-r*0.15;  // globe slightly above cy
+
+  // Outer warm glow corona
+  const corona=cx.createRadialGradient(c,globeY,r*0.3,c,globeY,r*3.2*pulse);
+  corona.addColorStop(0,`rgba(255,120,40,${0.35*haloI})`);
+  corona.addColorStop(0.3,`rgba(255,80,30,${0.15*haloI})`);
+  corona.addColorStop(0.6,`rgba(220,40,20,${0.06*haloI})`);
+  corona.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=corona;
+  cx.fillRect(c-r*4,cy-r*4,r*8,r*8);
+
+  // Glass globe fill (red-orange warm interior)
+  const globeG=cx.createRadialGradient(c-globeR*0.25,globeY-globeR*0.30,globeR*0.05,c,globeY,globeR);
+  globeG.addColorStop(0,'rgba(255,240,200,.90)');  // bright white-orange center
+  globeG.addColorStop(0.30,'rgba(255,160,60,.75)');
+  globeG.addColorStop(0.60,'rgba(220,60,20,.50)');
+  globeG.addColorStop(1,'rgba(140,20,10,.20)');
+  cx.fillStyle=globeG;
+  cx.beginPath();cx.arc(c,globeY,globeR,0,Math.PI*2);cx.fill();
+
+  // Brain silhouette INSIDE the bulb
+  const bsz=globeR*0.68;
+  cx.save();
+  cx.beginPath();cx.arc(c,globeY,globeR*0.92,0,Math.PI*2);cx.clip(); // clip to globe
+  cx.strokeStyle=`rgba(255,240,200,${0.70+Math.sin(t*3)*0.15})`;
   cx.lineWidth=1.4;
+  cx.shadowColor='rgba(255,220,150,.9)';cx.shadowBlur=8;
+  // Brain outline (miniature anatomical brain inside the bulb)
   cx.beginPath();
-  cx.moveTo(c-r*.75,cy-r*.1);
-  cx.bezierCurveTo(c-r*1.05,cy+r*.3,c-r*0.85,cy+r*.85,c,cy+r*.85);
-  cx.bezierCurveTo(c+r*0.85,cy+r*.85,c+r*1.05,cy+r*.3,c+r*.75,cy-r*.1);
+  cx.moveTo(c-bsz*0.14,globeY+bsz*0.82);
+  cx.bezierCurveTo(c-bsz*0.20,globeY+bsz,c-bsz*0.65,globeY+bsz*0.78,c-bsz*0.92,globeY+bsz*0.22);
+  cx.bezierCurveTo(c-bsz*1.06,globeY-bsz*0.08,c-bsz*1.00,globeY-bsz*0.76,c-bsz*0.62,globeY-bsz*0.96);
+  cx.bezierCurveTo(c-bsz*0.40,globeY-bsz*1.08,c-bsz*0.12,globeY-bsz*1.10,c,globeY-bsz*1.06);
+  cx.bezierCurveTo(c+bsz*0.12,globeY-bsz*1.10,c+bsz*0.40,globeY-bsz*1.08,c+bsz*0.62,globeY-bsz*0.96);
+  cx.bezierCurveTo(c+bsz*1.00,globeY-bsz*0.76,c+bsz*1.06,globeY-bsz*0.08,c+bsz*0.92,globeY+bsz*0.22);
+  cx.bezierCurveTo(c+bsz*0.65,globeY+bsz*0.78,c+bsz*0.20,globeY+bsz,c+bsz*0.14,globeY+bsz*0.82);
+  cx.bezierCurveTo(c+bsz*0.10,globeY+bsz*0.94,c-bsz*0.10,globeY+bsz*0.94,c-bsz*0.14,globeY+bsz*0.82);
+  cx.closePath(); cx.stroke();
+  // 4 gyri fold lines inside the brain
+  cx.strokeStyle=`rgba(255,220,140,${0.55+Math.sin(t*2)*0.1})`;cx.lineWidth=0.9;cx.shadowBlur=4;
+  cx.beginPath();cx.moveTo(c-bsz*0.80,globeY-bsz*0.55);cx.quadraticCurveTo(c-bsz*0.42,globeY-bsz*0.72,c-bsz*0.06,globeY-bsz*0.56);cx.stroke();
+  cx.beginPath();cx.moveTo(c-bsz*0.86,globeY-bsz*0.18);cx.quadraticCurveTo(c-bsz*0.46,globeY-bsz*0.36,c-bsz*0.06,globeY-bsz*0.18);cx.stroke();
+  cx.beginPath();cx.moveTo(c+bsz*0.06,globeY-bsz*0.56);cx.quadraticCurveTo(c+bsz*0.42,globeY-bsz*0.72,c+bsz*0.80,globeY-bsz*0.53);cx.stroke();
+  cx.beginPath();cx.moveTo(c+bsz*0.06,globeY-bsz*0.18);cx.quadraticCurveTo(c+bsz*0.46,globeY-bsz*0.36,c+bsz*0.86,globeY-bsz*0.16);cx.stroke();
+  // Brain stem wire
+  cx.strokeStyle='rgba(220,140,80,.60)';cx.lineWidth=1.8;cx.shadowBlur=2;
+  cx.beginPath();cx.moveTo(c,globeY+bsz*0.94);cx.lineTo(c,globeY+globeR*0.96);cx.stroke();
+  cx.restore();
+
+  // Glass globe border
+  cx.strokeStyle=active?'rgba(255,160,60,.90)':'rgba(200,100,50,.60)';
+  cx.lineWidth=2;
+  cx.shadowColor='rgba(255,120,40,.8)';cx.shadowBlur=active?18:8;
+  cx.beginPath();cx.arc(c,globeY,globeR,0,Math.PI*2);cx.stroke();
+
+  // Glass highlight (lens flare top-left)
+  cx.fillStyle='rgba(255,255,255,.28)';
+  cx.beginPath();cx.ellipse(c-globeR*0.30,globeY-globeR*0.32,globeR*0.28,globeR*0.16,-0.5,0,Math.PI*2);cx.fill();
+
+  // ── NECK (tapering glass tube below globe) ──
+  const neckTop=globeY+globeR;
+  const neckH=r*0.45;
+  const neckW=r*0.38;
+  cx.strokeStyle='rgba(180,100,50,.55)';cx.lineWidth=1.5;cx.shadowBlur=4;
+  cx.beginPath();
+  cx.moveTo(c-neckW,neckTop);
+  cx.lineTo(c-neckW*0.85,neckTop+neckH);
+  cx.moveTo(c+neckW,neckTop);
+  cx.lineTo(c+neckW*0.85,neckTop+neckH);
   cx.stroke();
-  
-  // glow when active
-  if(state.phase===PH.CHOICE||state.phase===PH.DRAG||state.choice.length>0){
-    const g=cx.createRadialGradient(c,cy+r*.2,4,c,cy+r*.2,r*1.1);
-    g.addColorStop(0,'rgba(255,235,150,.25)');
-    g.addColorStop(0.5,'rgba(255,200,80,.08)');
-    g.addColorStop(1,'rgba(255,200,80,0)');
-    cx.fillStyle=g;
-    cx.beginPath();
-    cx.moveTo(c-r*.75,cy-r*.1);
-    cx.bezierCurveTo(c-r*1.05,cy+r*.3,c-r*0.85,cy+r*.85,c,cy+r*.85);
-    cx.bezierCurveTo(c+r*0.85,cy+r*.85,c+r*1.05,cy+r*.3,c+r*.75,cy-r*.1);
-    cx.fill();
+
+  // ── BRASS BASE ──
+  const baseY=neckTop+neckH;
+  const baseH=r*0.38, baseW=neckW*1.1;
+  const brassG=cx.createLinearGradient(c-baseW,baseY,c+baseW,baseY);
+  brassG.addColorStop(0,'rgba(150,110,40,.80)');
+  brassG.addColorStop(0.5,'rgba(220,180,80,.90)');
+  brassG.addColorStop(1,'rgba(150,110,40,.80)');
+  cx.fillStyle=brassG;
+  cx.beginPath();cx.roundRect(c-baseW,baseY,baseW*2,baseH,3);cx.fill();
+  // Thread lines on brass
+  cx.strokeStyle='rgba(100,75,25,.60)';cx.lineWidth=1;
+  for(let i=1;i<4;i++){
+    const ty=baseY+baseH*(i/4);
+    cx.beginPath();cx.moveTo(c-baseW+2,ty);cx.lineTo(c+baseW-2,ty);cx.stroke();
   }
-  
-  // filament (zigzag inside bulb)
-  cx.strokeStyle=state.phase===PH.CHOICE?'#FFD86B':COL.faint;
-  cx.lineWidth=1;
-  // support wires from neck
-  cx.beginPath();
-  cx.moveTo(c-5,cy-r*.05);cx.lineTo(c-7,cy+r*.25);
-  cx.moveTo(c+5,cy-r*.05);cx.lineTo(c+7,cy+r*.25);
-  cx.stroke();
-  // filament zigzag
-  cx.beginPath();
-  cx.moveTo(c-7,cy+r*.25);
-  for(let i=0;i<7;i++){
-    cx.lineTo(c-7+i*(14/6),cy+r*.25+(i%2===0?-3:3));
-  }
-  cx.lineTo(c+7,cy+r*.25);
-  cx.stroke();
+  cx.restore();
 }
 
-// ---------- BRAIN (smooth realistic oval, soft rounded edges) ----------
+
 function drawBrain(){
   const c=L.BCX,top=L.BT,bot=L.BB,hw=L.BHW,h=bot-top;
   const cy=(top+bot)/2;
-  cx.strokeStyle=COL.line;cx.lineWidth=1.6;
-  cx.lineJoin='round';
-  cx.lineCap='round';
-  
-  // EYES — top-down view: only a small portion of each eyeball protrudes
-  // through the front (top) of the brain. Drawn in same B&W line style as brain.
-  const eyeR=Math.min(hw*0.10,14);
-  // Eyes are EMBEDDED in the brain - center sits below the brain top edge
-  // so only the top sliver shows, like a half-buried sphere from above.
-  const eyeY=top+eyeR*0.65;  // most of the eye is inside the brain
-  const eyeLX=c-hw*0.32;
-  const eyeRX=c+hw*0.32;
-  // Very subtle gaze drift
-  const ttE=performance.now()*0.0008;
-  const pupilDX=Math.sin(ttE)*eyeR*0.12;
-  
-  // Each eye: a small arc + a curved pupil line, ONLY the top portion visible
-  function drawEyeDome(ex,ey){
-    // The visible portion is the top ~35% of the eye sphere
-    // Draw just the upper arc of the eye circle
-    cx.strokeStyle=COL.line;
-    cx.lineWidth=1.5;
-    cx.fillStyle='#000'; // matches background - eye interior is dark like brain
-    
-    // Top dome arc (from left horizon to right horizon, only top half)
+  const t=performance.now()*.001;
+  const liveNegs=state.shapes.filter(s=>!s.dead&&s.kind==='neg').length;
+  const isOverload=liveNegs>=10;
+  const flowFrac=Math.min(1,state.flow);
+
+  // ── OUTER AMBIENT GLOW ──
+  const glowCol=isOverload?'rgba(255,60,30,.18)':'rgba(79,195,247,.10)';
+  cx.shadowColor=isOverload?'#FF3020':'#4FC3F7';
+  cx.shadowBlur=isOverload?30:16;
+
+  // ── ANATOMICAL BRAIN SHAPE (Image 4 reference) ──
+  // Wide, boxy overall outline with lobed top and tapered bottom
+  // Clip the entire brain area first for water + fold containment
+  cx.save();
+
+  // Draw the brain OUTLINE as a wide anatomical shape
+  function anatomyPath(){
+    // Outer brain profile — wide and rectangular with lobed bumps at top
+    const lx=c-hw, rx=c+hw;
+    const midY=(top+bot)*0.5;
     cx.beginPath();
-    cx.arc(ex,ey,eyeR,Math.PI*1.15,Math.PI*1.85,false);
-    // close it with a flat bottom line where it meets the brain surface
+    // Bottom-left start
+    cx.moveTo(lx+hw*0.10, bot-4);
+    // Bottom edge (flat-ish)
+    cx.lineTo(rx-hw*0.10, bot-4);
+    // Right side going up with temporal lobe bump
+    cx.bezierCurveTo(rx+hw*0.06, bot-h*0.08, rx+hw*0.08, bot-h*0.25, rx, bot-h*0.38);
+    cx.bezierCurveTo(rx+hw*0.04, bot-h*0.50, rx+hw*0.02, midY-h*0.10, rx-hw*0.06, top+h*0.18);
+    // Right upper — parietal-occipital bump
+    cx.bezierCurveTo(rx+hw*0.02, top+h*0.06, rx-hw*0.14, top-h*0.04, rx-hw*0.28, top+h*0.01);
+    // Central sulcus dip (walnut notch at top)
+    cx.bezierCurveTo(rx-hw*0.42, top-h*0.06, c+hw*0.12, top-h*0.08, c, top-h*0.06);
+    cx.bezierCurveTo(c-hw*0.12, top-h*0.08, lx+hw*0.42, top-h*0.06, lx+hw*0.28, top+h*0.01);
+    // Left upper — frontal lobe bump
+    cx.bezierCurveTo(lx+hw*0.14, top-h*0.04, lx-hw*0.02, top+h*0.06, lx+hw*0.06, top+h*0.18);
+    // Left side down
+    cx.bezierCurveTo(lx-hw*0.02, midY-h*0.10, lx-hw*0.04, bot-h*0.50, lx, bot-h*0.38);
+    cx.bezierCurveTo(lx-hw*0.08, bot-h*0.25, lx-hw*0.06, bot-h*0.08, lx+hw*0.10, bot-4);
     cx.closePath();
-    cx.fill();
-    cx.stroke();
-    
-    // Small pupil dot at center top - represents gaze
-    cx.fillStyle=COL.line;
-    cx.beginPath();
-    cx.arc(ex+pupilDX,ey-eyeR*0.45,eyeR*0.18,0,Math.PI*2);
-    cx.fill();
-    
-    // Curved "iris ring" - just a faint arc indicating the iris boundary
-    cx.strokeStyle='rgba(255,255,255,.40)';
-    cx.lineWidth=0.8;
-    cx.beginPath();
-    cx.arc(ex,ey-eyeR*0.45,eyeR*0.42,Math.PI*1.1,Math.PI*1.9,false);
-    cx.stroke();
   }
-  drawEyeDome(eyeLX,eyeY);
-  drawEyeDome(eyeRX,eyeY);
-  
-  // Brain outline
-  cx.strokeStyle=COL.line;cx.lineWidth=1.6;
-  cx.beginPath();
-  cx.ellipse(c,cy,hw,h*0.50,0,0,Math.PI*2);
-  cx.stroke();
-  
-  // Central fissure - subtle wavy line down the middle
-  cx.strokeStyle='rgba(255,255,255,.45)';
-  cx.lineWidth=1.4;
-  cx.beginPath();
-  cx.moveTo(c,top+10);
-  for(let yy=top+10;yy<bot-12;yy+=4){
-    const wob=Math.sin(yy*.06)*2;
-    cx.lineTo(c+wob,yy);
-  }
-  cx.stroke();
-  
-  // Soft inner gyri lines — gentle curves following oval contour
-  cx.strokeStyle='rgba(255,255,255,.18)';
-  cx.lineWidth=1;
-  const numRows=8;
-  for(let row=0;row<numRows;row++){
-    const t=row/(numRows-1);
-    const yy=top+h*0.15+t*(h*0.70);
-    const dy=yy-cy;
-    const xMax=Math.sqrt(Math.max(0,1-(dy*dy)/(h*0.5*h*0.5)))*hw;
-    // Left side gyri row
+
+  // ── BRAIN INTERIOR: dark sulcus background + organic gyri texture ──
+  // Matches the real brain fold appearance from reference images.
+  anatomyPath();
+  // Deep dark sulcus fill (the valleys between folds)
+  const bgG=cx.createLinearGradient(c,top,c,bot);
+  bgG.addColorStop(0,isOverload?'rgba(40,8,8,.82)':'rgba(6,14,36,.84)');
+  bgG.addColorStop(0.5,isOverload?'rgba(30,5,5,.86)':'rgba(4,10,28,.88)');
+  bgG.addColorStop(1,isOverload?'rgba(40,8,8,.82)':'rgba(8,14,36,.84)');
+  cx.fillStyle=bgG;cx.fill();
+
+    // ── WATER LEVEL (clipped to brain outline) ──
+  cx.save();
+  anatomyPath();cx.clip();
+  if(flowFrac>0){
+    const waterTop=bot-h*flowFrac;
+    const waterG=cx.createLinearGradient(c,bot,c,waterTop);
+    waterG.addColorStop(0,isOverload?'rgba(200,30,20,.55)':'rgba(79,195,247,.48)');
+    waterG.addColorStop(0.6,isOverload?'rgba(220,50,30,.38)':'rgba(100,210,255,.32)');
+    waterG.addColorStop(1,isOverload?'rgba(220,60,40,.15)':'rgba(140,230,255,.10)');
+    cx.fillStyle=waterG;
+    cx.fillRect(c-hw*1.1,waterTop,hw*2.2,bot-waterTop+10);
+    // Water surface shimmer
+    cx.strokeStyle=isOverload?'rgba(255,100,60,.50)':'rgba(79,195,247,.55)';
+    cx.lineWidth=1.2;
     cx.beginPath();
-    for(let xx=c-xMax+10;xx<=c-6;xx+=3){
-      const wob=Math.sin(xx*0.18+row*0.7)*2.5;
-      if(xx===c-xMax+10)cx.moveTo(xx,yy+wob);
-      else cx.lineTo(xx,yy+wob);
-    }
-    cx.stroke();
-    // Right side gyri row
-    cx.beginPath();
-    for(let xx=c+6;xx<=c+xMax-10;xx+=3){
-      const wob=Math.sin(xx*0.18+row*0.7+1.5)*2.5;
-      if(xx===c+6)cx.moveTo(xx,yy+wob);
-      else cx.lineTo(xx,yy+wob);
+    for(let px=0;px<=hw*2;px+=3){
+      const wx=c-hw+px;
+      const wy=waterTop+Math.sin(px/12+t*2.2)*2.4+Math.cos(px/8+t*1.5)*1.4;
+      px===0?cx.moveTo(wx,wy):cx.lineTo(wx,wy);
     }
     cx.stroke();
   }
-  
-  // WATER LEVEL inside brain - clipped to the oval
-  const totalWater=state.hitWater+state.missWater*0.4;
-  if(totalWater>0){
-    const wLevel=Math.min(1,totalWater);
-    const wy=bot-wLevel*(h-15);
+
+  cx.restore();  // end water clip
+
+  // ── FOLD RAMP VISUAL LINES (match physics ramp positions exactly) ──
+  // Bold 3D-style curved lines at the same positions as the physics ramps.
+  // When blocks bounce off a ramp, they're bouncing off what you see here.
+  const foldBase=isOverload?'rgba(255,110,80,':'rgba(79,195,247,';
+
+  // Each ramp position: {y:fraction, xOff:fraction, w:fraction, deg}
+  const VISUAL_FOLDS=[
+    {y:0.14,xOff:-0.10,w:0.55,deg: 22},
+    {y:0.28,xOff: 0.10,w:0.55,deg:-22},
+    {y:0.42,xOff:-0.08,w:0.52,deg: 18},
+    {y:0.56,xOff: 0.08,w:0.52,deg:-18},
+    {y:0.70,xOff: 0.00,w:0.46,deg:  9},
+  ];
+
+  // ── BRAIN-FOLD GYRUS CURVES (S-shaped, same angle as physics ramps) ──
+  // Each line is drawn as a series of bezier gyri (brain folds) at the same angle.
+  // The physics stays as straight ramps; only the visual is wavy.
+  VISUAL_FOLDS.forEach((r,ri)=>{
+    const ry=top+h*r.y;
+    const rxCenter=c+hw*r.xOff;
+    const halfW=hw*r.w;
+    const ang=r.deg*Math.PI/180;
+    const hitFlash=state.pinFlashes&&state.pinFlashes[ri]?
+      Math.max(0,1-(performance.now()-state.pinFlashes[ri])/550):0;
+
     cx.save();
-    cx.beginPath();
-    cx.ellipse(c,cy,hw,h*0.50,0,0,Math.PI*2);
-    cx.clip();
-    cx.fillStyle='rgba(79,195,247,.22)';
-    cx.fillRect(c-hw-20,wy,hw*2+40,bot-wy+20);
-    cx.strokeStyle=COL.water;cx.lineWidth=1.2;
-    cx.beginPath();
-    const tt=performance.now()*.003;
-    for(let xx=c-hw-20;xx<=c+hw+20;xx+=3){
-      const yy=wy+Math.sin((xx+tt*60)*.06)*2;
-      xx===c-hw-20?cx.moveTo(xx,yy):cx.lineTo(xx,yy);
+    cx.translate(rxCenter,ry);
+    cx.rotate(ang);
+
+    // ── Draw the fold as 3 gyrus bumps (bezier S-curves) ──
+    // A brain gyrus looks like repeating rounded ridges, alternating up/down.
+    const numGyri=3;
+    const segW=(halfW*2)/numGyri;
+    const gH=9+hitFlash*4;  // gyrus amplitude
+
+    // Shadow pass (depth)
+    cx.strokeStyle=`rgba(0,0,0,${0.50+hitFlash*0.20})`;
+    cx.lineWidth=8+hitFlash*3;
+    cx.lineCap='round';cx.lineJoin='round';
+    cx.beginPath();cx.moveTo(-halfW,3);
+    for(let g=0;g<numGyri;g++){
+      const x0=-halfW+g*segW, x3=x0+segW;
+      const dir=g%2===0?-1:1;
+      const x1=x0+segW*0.28, x2=x0+segW*0.72;
+      cx.bezierCurveTo(x1,dir*gH*1.3, x1,dir*gH*1.3, x0+segW*0.5,dir*gH*0.5);
+      cx.bezierCurveTo(x2,-dir*gH*0.5, x2,-dir*gH*0.5, x3,0);
     }
     cx.stroke();
+
+    // Main gyrus line (lit) — thinner since the brain texture is now the background
+    const la=0.48+hitFlash*0.45;
+    cx.strokeStyle=foldBase+la+')';
+    cx.lineWidth=3.5+hitFlash*5;
+    cx.shadowColor=isOverload?'rgba(255,80,40,.90)':'rgba(79,195,247,.90)';
+    cx.shadowBlur=12+hitFlash*24;
+    cx.beginPath();cx.moveTo(-halfW,0);
+    for(let g=0;g<numGyri;g++){
+      const x0=-halfW+g*segW, x3=x0+segW;
+      const dir=g%2===0?-1:1;
+      const x1=x0+segW*0.28, x2=x0+segW*0.72;
+      cx.bezierCurveTo(x1,dir*gH*1.3, x1,dir*gH*1.3, x0+segW*0.5,dir*gH*0.5);
+      cx.bezierCurveTo(x2,-dir*gH*0.5, x2,-dir*gH*0.5, x3,0);
+    }
+    cx.stroke();
+
+    // Bright ridge highlight on top edge of each gyrus
+    cx.strokeStyle=`rgba(255,255,255,${0.35+hitFlash*0.35})`;
+    cx.lineWidth=1.8;cx.shadowBlur=5+hitFlash*8;
+    cx.beginPath();cx.moveTo(-halfW,-3);
+    for(let g=0;g<numGyri;g++){
+      const x0=-halfW+g*segW, x3=x0+segW;
+      const dir=g%2===0?-1:1;
+      const x1=x0+segW*0.28, x2=x0+segW*0.72;
+      cx.bezierCurveTo(x1,dir*gH*1.3-2, x1,dir*gH*1.3-2, x0+segW*0.5,dir*gH*0.5-2);
+      cx.bezierCurveTo(x2,-dir*gH*0.5-2, x2,-dir*gH*0.5-2, x3,-2);
+    }
+    cx.stroke();
+    cx.shadowBlur=0;
+
+    // Flash ripple burst when hit
+    if(hitFlash>0.06){
+      cx.strokeStyle=`rgba(255,255,255,${hitFlash*0.45})`;
+      cx.lineWidth=1.0;
+      cx.beginPath();cx.ellipse(0,0,halfW*0.45,8+hitFlash*14,0,0,Math.PI*2);cx.stroke();
+    }
     cx.restore();
+
+    });
+
+  // ── BASKETS: glowing brackets — top=open-tube chutes, bottom=catch ──
+  if(state.baskets){
+    state.baskets.forEach(bk=>{
+      const bkCol=bk.side==='L'?'rgba(79,195,247,':'rgba(255,200,60,';
+      const shadowC=bk.side==='L'?'rgba(79,195,247,.7)':'rgba(255,200,60,.7)';
+      cx.save();
+      cx.lineWidth=4;cx.lineCap='round';cx.lineJoin='round';
+      cx.shadowColor=shadowC;cx.shadowBlur=8;
+      const BK_W=38,BK_H=30;
+      const x=bk.x,y=bk.y;
+
+      if(bk.open){
+        // ── TOP BASKET = vacuum tube guide (no floor, two side walls only) ──
+        cx.strokeStyle=bkCol+'0.80)';
+        if(bk.side==='L'){
+          // Back wall (left side, full height)
+          cx.beginPath();cx.moveTo(x+4,y);cx.lineTo(x+4,y+BK_H);cx.stroke();
+          // Front guide (right side, shorter — arrows hint at flow)
+          cx.beginPath();cx.moveTo(x+BK_W,y);cx.lineTo(x+BK_W,y+BK_H*0.65);cx.stroke();
+          // Flow arrows — suggest vacuum downward motion
+          cx.strokeStyle=bkCol+'0.45)';cx.lineWidth=1.5;
+          for(let ay=y+6;ay<y+BK_H-4;ay+=7){
+            cx.beginPath();cx.moveTo(x+BK_W*0.5,ay);cx.lineTo(x+BK_W*0.5-4,ay+4);cx.moveTo(x+BK_W*0.5,ay);cx.lineTo(x+BK_W*0.5+4,ay+4);cx.stroke();
+          }
+        }else{
+          cx.beginPath();cx.moveTo(x+BK_W-4,y);cx.lineTo(x+BK_W-4,y+BK_H);cx.stroke();
+          cx.beginPath();cx.moveTo(x,y);cx.lineTo(x,y+BK_H*0.65);cx.stroke();
+          cx.strokeStyle=bkCol+'0.45)';cx.lineWidth=1.5;
+          for(let ay=y+6;ay<y+BK_H-4;ay+=7){
+            cx.beginPath();cx.moveTo(x+BK_W*0.5,ay);cx.lineTo(x+BK_W*0.5-4,ay+4);cx.moveTo(x+BK_W*0.5,ay);cx.lineTo(x+BK_W*0.5+4,ay+4);cx.stroke();
+          }
+        }
+      }else{
+        // ── BOTTOM BASKET = solid U-catch ──
+        cx.strokeStyle=bkCol+'0.78)';
+        cx.beginPath();
+        if(bk.side==='L'){
+          cx.moveTo(x+4,y);
+          cx.lineTo(x+4,y+BK_H);       // back wall down
+          cx.lineTo(x+BK_W,y+BK_H);    // floor right
+          cx.lineTo(x+BK_W,y+BK_H*0.3);// front wall up (shorter opening)
+        }else{
+          cx.moveTo(x+BK_W-4,y);
+          cx.lineTo(x+BK_W-4,y+BK_H);
+          cx.lineTo(x,y+BK_H);
+          cx.lineTo(x,y+BK_H*0.3);
+        }
+        cx.stroke();
+        // Glow fill tint inside
+        cx.fillStyle=bkCol+'0.06)';
+        cx.fill();
+      }
+      cx.shadowBlur=0;cx.restore();
+    });
   }
+
+  // Central longitudinal fissure (vertical split between hemispheres)
+  cx.strokeStyle=foldBase+'0.22)';cx.lineWidth=2;cx.shadowBlur=6;
+  cx.setLineDash([4,8]);
+  cx.beginPath();cx.moveTo(c,top+h*0.02);cx.lineTo(c,bot-h*0.10);cx.stroke();
+  cx.setLineDash([]);
+  cx.shadowBlur=0;
+
+  // Overload glitch bands
+  if(isOverload){
+    const glitchA=0.15+Math.random()*0.10;
+    for(let g=0;g<3;g++){
+      const gy=top+Math.random()*h;
+      cx.fillStyle=`rgba(255,60,30,${glitchA})`;
+      cx.fillRect(c-hw,gy,hw*2,2+Math.random()*4);
+    }
+    cx.fillStyle=`rgba(255,40,20,${0.06+Math.sin(t*8)*0.03})`;
+    cx.fillRect(c-hw,top,hw*2,h);
+  }
+
+  cx.restore();
+
+  // ── OUTER BRAIN BORDER (with glow) ──
+  anatomyPath();
+  cx.strokeStyle=isOverload?`rgba(255,80,40,${0.7+Math.sin(t*6)*0.2})`:`rgba(79,195,247,${0.45+Math.sin(t*1.5)*0.08})`;
+  cx.lineWidth=isOverload?2.5:1.8;
+  cx.shadowColor=isOverload?'#FF3020':'#4FC3F7';
+  cx.shadowBlur=isOverload?24:10;
+  cx.stroke();
+  cx.shadowBlur=0;
+
+  // ── OVERLOAD LABEL ──
+  if(isOverload){
+    cx.fillStyle=`rgba(255,100,60,${0.80+Math.sin(t*8)*0.20})`;
+    cx.font=`bold ${Math.min(W*0.04,16)}px monospace`;
+    cx.textAlign='center';
+    cx.shadowColor='rgba(255,60,30,.9)';cx.shadowBlur=16;
+    cx.fillText(`CORTEX OVERLOAD [${liveNegs}]`,c,cy+h*0.40);
+    cx.shadowBlur=0;
+  }
+
+  // ── PEGGLE PINS — glowing circles, flash on hit ──
+  if(state.pegPins&&state.pegPins.length){
+    const now=performance.now();
+    state.pegPins.forEach((p,i)=>{
+      const flashAge=state.pinFlashes&&state.pinFlashes[i]?(now-state.pinFlashes[i]):Infinity;
+      const flashFrac=flashAge<500?1-(flashAge/500):0;  // 0..1, 1 = just hit
+      const pinAlpha=0.30+flashFrac*0.60;
+      const pinR=p.r*(0.85+flashFrac*0.55);             // grows on hit
+      const pinGlow=4+flashFrac*22;
+      const pinColor=isOverload?
+        `rgba(255,100,60,${pinAlpha})`:
+        `rgba(79,195,247,${pinAlpha})`;
+      const rimColor=isOverload?
+        `rgba(255,150,100,${pinAlpha+0.25})`:
+        `rgba(140,225,255,${pinAlpha+0.25})`;
+      cx.save();
+      cx.shadowColor=isOverload?'rgba(255,80,40,.9)':'rgba(79,195,247,.9)';
+      cx.shadowBlur=pinGlow;
+      // Filled glow circle
+      cx.fillStyle=pinColor;
+      cx.beginPath();cx.arc(p.x,p.y,pinR,0,Math.PI*2);cx.fill();
+      // Bright rim
+      cx.strokeStyle=rimColor;
+      cx.lineWidth=1.4+flashFrac*1.2;
+      cx.beginPath();cx.arc(p.x,p.y,pinR,0,Math.PI*2);cx.stroke();
+      // Extra pulse ring if just hit
+      if(flashFrac>0.05){
+        cx.globalAlpha=flashFrac*0.4;
+        cx.beginPath();cx.arc(p.x,p.y,pinR*1.8+flashFrac*10,0,Math.PI*2);cx.stroke();
+        cx.globalAlpha=1;
+      }
+      cx.restore();
+    });
+  }
+
+  // ── CORNER BRACKETS ──
+  const bkL=c-hw,bkR=c+hw,bkT=top,bkB=bot,bkS=12;
+  cx.strokeStyle='rgba(79,195,247,.35)';cx.lineWidth=1.5;
+  [[bkL,bkT,1,1],[bkR,bkT,-1,1],[bkL,bkB,1,-1],[bkR,bkB,-1,-1]].forEach(([bx,by,dx,dy])=>{
+    cx.beginPath();cx.moveTo(bx+dx*bkS,by);cx.lineTo(bx,by);cx.lineTo(bx,by+dy*bkS);cx.stroke();
+  });
 }
 
-// ---------- Draw words in transit ----------
-function drawFalling(){
+
+function drawWordBox(x,y,word,kind,scale){
+  scale=scale||1;
+  const lines=wrapWord(word.toUpperCase(),14);
+  const lineH=11;
+  const isPos=kind==='pos';
+  const col=isPos?'#4FC3F7':'#FF5252';
+  const glow=isPos?'rgba(79,195,247,.9)':'rgba(255,82,82,.85)';
+  // Measure widest line
+  cx.font=`700 ${10*scale}px monospace`;
+  let maxW=0;
+  lines.forEach(ln=>{const w=cx.measureText(ln).width;if(w>maxW)maxW=w;});
+  const boxW=maxW+18*scale;
+  const boxH=lines.length*lineH*scale+10*scale;
+  // Glow halo behind box
+  cx.shadowColor=glow;
+  cx.shadowBlur=14*scale;
+  // Box fill (translucent dark)
+  cx.fillStyle=isPos?'rgba(79,195,247,.12)':'rgba(255,82,82,.16)';
+  cx.fillRect(x-boxW/2,y-boxH/2,boxW,boxH);
+  // Bright colored border
+  cx.shadowBlur=8*scale;
+  cx.strokeStyle=col;
+  cx.lineWidth=1.4*scale;
+  cx.strokeRect(x-boxW/2,y-boxH/2,boxW,boxH);
+  // Inner corner accents (cyberpunk HUD detail)
+  cx.shadowBlur=0;
+  cx.beginPath();
+  const cs=4*scale;
+  cx.moveTo(x-boxW/2,y-boxH/2+cs);cx.lineTo(x-boxW/2+cs,y-boxH/2);
+  cx.moveTo(x+boxW/2,y-boxH/2+cs);cx.lineTo(x+boxW/2-cs,y-boxH/2);
+  cx.moveTo(x-boxW/2,y+boxH/2-cs);cx.lineTo(x-boxW/2+cs,y+boxH/2);
+  cx.moveTo(x+boxW/2,y+boxH/2-cs);cx.lineTo(x+boxW/2-cs,y+boxH/2);
+  cx.strokeStyle='#fff';cx.lineWidth=1.2*scale;cx.stroke();
+  // Glowing text
+  cx.shadowColor=glow;
+  cx.shadowBlur=10*scale;
+  cx.fillStyle='#fff';
   cx.textAlign='center';
+  const startY=y-(lines.length-1)*lineH*scale/2+3*scale;
+  lines.forEach((ln,i)=>{
+    cx.fillText(ln,x,startY+i*lineH*scale);
+  });
+  cx.shadowBlur=0;
+}
+
+function drawFalling(){
   state.falling.forEach(f=>{
-    cx.fillStyle=f.kind==='pos'?COL.water:'#fff';
-    cx.font='500 10px monospace';
-    cx.shadowColor=f.kind==='pos'?COL.water:'rgba(255,255,255,.5)';
-    cx.shadowBlur=8;
-    const lines=wrapWord(f.word.toUpperCase(),14);
-    const lineH=11;
-    const startY=f.y-(lines.length-1)*lineH/2;
-    lines.forEach((ln,i)=>{
-      cx.fillText(ln,f.x,startY+i*lineH);
-    });
-    cx.shadowBlur=0;
+    // Motion trail - faded ghosts behind the word as it falls
+    if(f.trail&&f.trail.length>1){
+      cx.save();
+      cx.globalCompositeOperation='lighter';
+      f.trail.forEach((t,i)=>{
+        const a=(i/f.trail.length)*0.25;
+        const r=14-(f.trail.length-i)*1.5;
+        if(r>2){
+          const col=f.kind==='pos'?`rgba(79,195,247,${a})`:`rgba(255,82,82,${a})`;
+          const g=cx.createRadialGradient(t.x,t.y,0,t.x,t.y,r*2);
+          g.addColorStop(0,col);
+          g.addColorStop(1,'rgba(0,0,0,0)');
+          cx.fillStyle=g;
+          cx.fillRect(t.x-r*2,t.y-r*2,r*4,r*4);
+        }
+      });
+      cx.restore();
+    }
+    drawWordBox(f.x,f.y,f.word,f.kind,1);
   });
 }
 function drawChoice(){
   if(state.phase!==PH.CHOICE)return;
   const cy=L.BY;
-  cx.textAlign='center';
   state.choice.forEach(c=>{
     cx.globalAlpha=1-c.vanish;
-    cx.save();cx.translate(c.x,cy+L.BR*.3);
-    const br=1+Math.sin(performance.now()*.003+c.x)*.05;
-    cx.scale(br,br);
-    cx.fillStyle=c.kind==='pos'?COL.water:'#fff';
-    cx.font='500 10px monospace';
-    cx.shadowColor=c.kind==='pos'?COL.water:'rgba(255,255,255,.7)';
-    cx.shadowBlur=10;
-    const lines=wrapWord(c.word.toUpperCase(),14);
-    const lineH=12;
-    const startY=-(lines.length-1)*lineH/2+4;
-    lines.forEach((ln,i)=>{
-      cx.fillText(ln,0,startY+i*lineH);
-    });
-    cx.shadowBlur=0;
-    cx.restore();cx.globalAlpha=1;
+    // Scale 1.35 so text is clearly readable without straining
+    const br=1.55+Math.sin(performance.now()*.003+c.x)*.07;
+    drawWordBox(c.x,cy+L.BR*.3,c.word,c.kind,br);
+    cx.globalAlpha=1;
   });
-  cx.fillStyle=COL.dim;cx.font='300 8px monospace';
-  cx.fillText('tap one · then drag into brain',W/2,cy+L.BR*.3-30);
+  // Instruction text — brighter, larger, centered below the two words
+  cx.save();
+  cx.fillStyle='rgba(180,220,255,.80)';
+  cx.font='400 9px monospace';
+  cx.textAlign='center';
+  cx.shadowColor='rgba(79,195,247,.5)';
+  cx.shadowBlur=6;
+  cx.fillText('TAP · DRAG INTO BRAIN',W/2,cy+L.BR*.3-44);
+  cx.restore();
 }
 function drawDragWord(){
   if(state.phase!==PH.DRAG||!state.drag)return;
   const d=state.drag;
-  cx.textAlign='center';
-  cx.fillStyle=d.kind==='pos'?COL.water:'#fff';
-  cx.font='500 11px monospace';
-  cx.shadowColor=d.kind==='pos'?COL.water:'rgba(255,255,255,.7)';
-  cx.shadowBlur=12;
-  const lines=wrapWord(d.word.toUpperCase(),14);
-  const lineH=13;
-  const startY=d.y-(lines.length-1)*lineH/2;
-  lines.forEach((ln,i)=>{
-    cx.fillText(ln,d.x,startY+i*lineH);
-  });
-  cx.shadowBlur=0;
+  drawWordBox(d.x,d.y,d.word,d.kind,1.1);
   cx.strokeStyle='rgba(255,255,255,.15)';
   cx.lineWidth=1;
   cx.setLineDash([2,3]);
   cx.beginPath();cx.moveTo(W/2,L.BY+L.BR*.4);cx.lineTo(d.x,d.y);cx.stroke();
   cx.setLineDash([]);
+  // Ghost hand below the word — translucent pointing finger that follows the drag
+  drawDragHand(d.x,d.y+18);
+}
+
+// Stylized pointing hand drawn below the dragged word. The index finger reaches
+// up toward the word and the whole shape glows cyan, matching the Gemini concept.
+function drawDragHand(x,y){
+  cx.save();
+  cx.translate(x,y);
+  cx.shadowColor='rgba(120,200,255,.85)';
+  cx.shadowBlur=14;
+  cx.strokeStyle='rgba(200,230,255,.9)';
+  cx.fillStyle='rgba(120,180,240,.18)';
+  cx.lineWidth=1.5;
+  cx.lineJoin='round';
+  cx.beginPath();
+  // Index finger (pointing up toward the word)
+  cx.moveTo(-3,2);
+  cx.lineTo(-3,-14);
+  cx.quadraticCurveTo(-3,-19,1,-19);
+  cx.quadraticCurveTo(5,-19,5,-14);
+  cx.lineTo(5,0);
+  // Middle finger knuckle bump
+  cx.quadraticCurveTo(9,-1,11,3);
+  cx.quadraticCurveTo(12,7,11,11);
+  // Ring/pinky bumps
+  cx.quadraticCurveTo(14,12,14,16);
+  cx.quadraticCurveTo(14,22,9,24);
+  // Wrist
+  cx.lineTo(-7,24);
+  cx.quadraticCurveTo(-12,24,-12,18);
+  cx.lineTo(-12,8);
+  // Thumb
+  cx.quadraticCurveTo(-12,2,-9,0);
+  cx.lineTo(-6,2);
+  cx.closePath();
+  cx.fill();cx.stroke();
+  // Inner highlight line on the index finger (gives a wire-frame feel)
+  cx.beginPath();
+  cx.strokeStyle='rgba(220,240,255,.55)';
+  cx.lineWidth=1;
+  cx.moveTo(1,-17);cx.lineTo(1,-2);cx.stroke();
+  cx.restore();
 }
 function drawShapes(){
+  const t=performance.now()*.001;
+
+  // ── 1. ADDITIVE GLOW HALOS (drawn first) ──
+  cx.save();cx.globalCompositeOperation='lighter';
   state.shapes.forEach(s=>{
     if(s.dead)return;
-    s.def.draw(s.body);
-    // crack overlay
-    if(s.kind==='neg'&&s.hits>0){
+    const verts=s.body.vertices;
+    if(!verts||!verts.length)return;
+    const px=s.body.position.x,py=s.body.position.y;
+    const col=s.color||(s.kind==='pos'?'#00ACC1':'#E53935');
+    const r=(s.hexR||30)*1.5;
+    const g=cx.createRadialGradient(px,py,0,px,py,r);
+    g.addColorStop(0,col+'60');g.addColorStop(1,col+'00');
+    cx.fillStyle=g;cx.fillRect(px-r,py-r,r*2,r*2);
+  });
+  cx.restore();
+
+  // ── 2. MAIN DRAW PASS ──
+  state.shapes.forEach(s=>{
+    if(s.dead)return;
+    const col=s.color||(s.kind==='pos'?'#00ACC1':'#E53935');
+    const word=(s.word||'').toUpperCase();
+    const verts=s.body.vertices;
+    const px=s.body.position.x,py=s.body.position.y;
+    const ang=s.body.angle;
+
+    // ── POSITIVE BALL (cyan glowing circle) ──
+    if(s.body.label==='pos:fall'){
       cx.save();
-      cx.translate(s.body.position.x,s.body.position.y);
-      cx.rotate(s.body.angle);
-      cx.strokeStyle='rgba(255,255,255,.55)';
-      cx.lineWidth=1;
-      const p=s.hits/3;
-      const n=2+Math.floor(p*4);
-      for(let i=0;i<n;i++){
-        const a=(i/n)*Math.PI*2+p*1.5;
-        cx.beginPath();cx.moveTo(0,0);
-        let xx=0,yy=0;
-        for(let st=0;st<3;st++){
-          xx+=Math.cos(a+st*.5)*(4+p*8);
-          yy+=Math.sin(a+st*.5)*(4+p*8);
-          cx.lineTo(xx,yy);
-        }
+      cx.translate(px,py);
+      cx.shadowColor=col;cx.shadowBlur=18;
+      const bg=cx.createRadialGradient(-4,-4,1,0,0,11);
+      bg.addColorStop(0,'rgba(220,250,255,.98)');
+      bg.addColorStop(0.5,col+'DD');
+      bg.addColorStop(1,col+'60');
+      cx.fillStyle=bg;cx.beginPath();cx.arc(0,0,11,0,Math.PI*2);cx.fill();
+      cx.strokeStyle='rgba(200,245,255,.85)';cx.lineWidth=1.8;cx.shadowBlur=6;
+      cx.beginPath();cx.arc(0,0,11,0,Math.PI*2);cx.stroke();
+      cx.fillStyle='rgba(255,255,255,.90)';
+      cx.font=`bold ${Math.min(W*0.018,8)}px monospace`;cx.textAlign='center';
+      cx.shadowBlur=0;cx.fillText(word.substring(0,8),0,3);
+      cx.restore();
+      return;
+    }
+
+    // ── HEXAGON WORD BLOCK ──
+    if(!verts||verts.length<3)return;
+
+    cx.save();
+
+    // Draw hexagon using body vertices (world coordinates — handles rotation natively)
+    cx.beginPath();
+    verts.forEach((v,i)=>{ i===0?cx.moveTo(v.x,v.y):cx.lineTo(v.x,v.y); });
+    cx.closePath();
+
+    // Main fill
+    cx.shadowColor=col;cx.shadowBlur=10;
+    cx.fillStyle=col;cx.fill();
+
+    // Top-face highlight (3D brightness — lighter on upper portion of hex)
+    cx.shadowBlur=0;
+    cx.fillStyle='rgba(255,255,255,.30)';
+    cx.save();
+    // Clip to top half of the hexagon for highlight
+    const cy2=s.body.position.y;
+    cx.beginPath();
+    verts.forEach((v,i)=>{ i===0?cx.moveTo(v.x,v.y):cx.lineTo(v.x,v.y); });
+    cx.closePath();cx.clip();
+    const hexR=s.hexR||30;
+    cx.fillRect(px-hexR*1.3,cy2-hexR*1.3,hexR*2.6,hexR);
+    cx.restore();
+
+    // Bottom shadow (3D depth)
+    cx.fillStyle='rgba(0,0,0,.30)';
+    cx.save();
+    cx.beginPath();
+    verts.forEach((v,i)=>{ i===0?cx.moveTo(v.x,v.y):cx.lineTo(v.x,v.y); });
+    cx.closePath();cx.clip();
+    cx.fillRect(px-hexR*1.3,py,hexR*2.6,hexR*1.3);
+    cx.restore();
+
+    // Bright hexagon border
+    cx.strokeStyle='rgba(255,255,255,.50)';cx.lineWidth=2.0;
+    cx.beginPath();
+    verts.forEach((v,i)=>{ i===0?cx.moveTo(v.x,v.y):cx.lineTo(v.x,v.y); });
+    cx.closePath();cx.stroke();
+
+    // Inner edge highlight (top-left rim — gives gem-like 3D feel)
+    cx.strokeStyle='rgba(255,255,255,.22)';cx.lineWidth=1.0;
+    if(verts.length>=6){
+      cx.beginPath();
+      cx.moveTo(verts[4].x,verts[4].y);
+      cx.lineTo(verts[5].x,verts[5].y);
+      cx.lineTo(verts[0].x,verts[0].y);
+      cx.lineTo(verts[1].x,verts[1].y);
+      cx.stroke();
+    }
+
+    // Crack marks if the block was hit
+    if(s.hits>0){
+      cx.strokeStyle=`rgba(255,255,255,${0.40+s.hits*0.15})`;cx.lineWidth=0.9;
+      for(let i=0;i<1+s.hits;i++){
+        const a=i*1.8+ang;
+        const r0=hexR*0.1, r1=hexR*(0.5+Math.random()*0.3);
+        cx.beginPath();
+        cx.moveTo(px+Math.cos(a)*r0,py+Math.sin(a)*r0);
+        cx.lineTo(px+Math.cos(a+0.3)*r1,py+Math.sin(a+0.3)*r1);
         cx.stroke();
       }
-      cx.restore();
     }
+
+    // Word text — centered, rotates with the hex
+    cx.save();
+    cx.translate(px,py);cx.rotate(ang);
+    const hexR2=s.hexR||30;
+    const fz=Math.max(7,Math.min(hexR2*0.28,10));
+    cx.fillStyle='rgba(255,255,255,.95)';
+    cx.font=`bold ${fz}px monospace`;cx.textAlign='center';
+    cx.shadowColor='rgba(0,0,0,.55)';cx.shadowBlur=3;
+    // Show word in 1-2 lines if it fits
+    const maxW=hexR2*1.2;
+    const full=word.substring(0,13);
+    if(cx.measureText(full).width<=maxW){
+      cx.fillText(full,0,fz*0.38);
+    }else{
+      const mid=Math.floor(full.length/2);
+      cx.fillText(full.substring(0,mid),0,-fz*0.3);
+      cx.fillText(full.substring(mid),0,fz*0.8);
+    }
+    cx.shadowBlur=0;
+    cx.restore();
+
+    cx.restore();
   });
 }
+
+
 function drawFx(){
   state.fx.forEach(e=>{
     if(e.type==='burst'){
-      const a=Math.max(0,e.life/600);
-      cx.fillStyle=e.c;cx.globalAlpha=a;
-      cx.beginPath();cx.arc(e.x,e.y,1.4,0,Math.PI*2);cx.fill();
+      const a=Math.max(0,e.life/(e.maxLife||600));
+      const sz=e.size||1.4;
+      // Stacked shadow passes for bloom effect
+      cx.shadowColor=e.c;
+      cx.shadowBlur=12;
+      cx.fillStyle=e.c;
+      cx.globalAlpha=a;
+      cx.beginPath();cx.arc(e.x,e.y,sz,0,Math.PI*2);cx.fill();
+      // Bright white core
+      cx.shadowBlur=6;
+      cx.fillStyle='#fff';
+      cx.globalAlpha=a*0.8;
+      cx.beginPath();cx.arc(e.x,e.y,sz*0.5,0,Math.PI*2);cx.fill();
+      cx.shadowBlur=0;
+    }else if(e.type==='shimmer'){
+      const a=Math.max(0,e.life/(e.maxLife||1400));
+      const flicker=0.6+0.4*Math.sin(e.life*0.03);
+      cx.shadowColor=e.c;
+      cx.shadowBlur=8;
+      cx.fillStyle=e.c;
+      cx.globalAlpha=a*flicker;
+      cx.beginPath();cx.arc(e.x,e.y,e.size||1,0,Math.PI*2);cx.fill();
+      cx.shadowBlur=0;
+    }else if(e.type==='ring'){
+      const a=Math.max(0,e.life/(e.maxLife||600));
+      cx.shadowColor=e.c;
+      cx.shadowBlur=14;
+      cx.strokeStyle=e.c;
+      cx.globalAlpha=a*0.85;
+      cx.lineWidth=(e.lw||2)*a;
+      cx.beginPath();cx.arc(e.x,e.y,e.r,0,Math.PI*2);cx.stroke();
+      cx.shadowBlur=0;
     }else if(e.type==='wave'){
       const a=Math.max(0,e.life/(e.small?400:500));
+      cx.shadowColor=e.c;
+      cx.shadowBlur=6;
       cx.strokeStyle=e.c;cx.globalAlpha=a*0.8;cx.lineWidth=1.2;
       cx.beginPath();cx.arc(e.x,e.y,e.r,0,Math.PI*2);cx.stroke();
       cx.beginPath();cx.arc(e.x,e.y,e.r*0.6,0,Math.PI*2);cx.stroke();
+      cx.shadowBlur=0;
+    }else if(e.type==='zap'){
+      // Lightning beam from bulb to a doomed negative — bright jagged path
+      // with a yellow core and a wider white-hot glow, fading over its lifetime.
+      const a=Math.max(0,e.life/(e.maxLife||520));
+      const segs=e.segments||[];
+      if(segs.length<2)return;
+      // Re-jitter every frame for that electric crackle feel
+      const jittered=segs.map((p,idx)=>{
+        if(idx===0||idx===segs.length-1)return p;
+        return {x:p.x+(Math.random()-0.5)*4,y:p.y+(Math.random()-0.5)*4};
+      });
+      // Outer glow pass
+      cx.save();
+      cx.globalCompositeOperation='lighter';
+      cx.shadowColor='rgba(255,230,120,1)';cx.shadowBlur=22;
+      cx.strokeStyle=`rgba(255,220,120,${0.55*a})`;
+      cx.lineWidth=6;
+      cx.lineCap='round';cx.lineJoin='round';
+      cx.beginPath();
+      jittered.forEach((p,idx)=>idx===0?cx.moveTo(p.x,p.y):cx.lineTo(p.x,p.y));
+      cx.stroke();
+      // Bright inner core
+      cx.shadowColor='rgba(255,255,255,1)';cx.shadowBlur=12;
+      cx.strokeStyle=`rgba(255,255,255,${0.95*a})`;
+      cx.lineWidth=1.8;
+      cx.beginPath();
+      jittered.forEach((p,idx)=>idx===0?cx.moveTo(p.x,p.y):cx.lineTo(p.x,p.y));
+      cx.stroke();
+      // Small impact flash at the target end
+      const tip=jittered[jittered.length-1];
+      const flashG=cx.createRadialGradient(tip.x,tip.y,0,tip.x,tip.y,28);
+      flashG.addColorStop(0,`rgba(255,255,200,${0.7*a})`);
+      flashG.addColorStop(0.4,`rgba(255,220,120,${0.35*a})`);
+      flashG.addColorStop(1,'rgba(255,200,80,0)');
+      cx.fillStyle=flashG;
+      cx.fillRect(tip.x-30,tip.y-30,60,60);
+      cx.restore();
     }
   });
   cx.globalAlpha=1;
@@ -4067,13 +5354,13 @@ function drawFx(){
 let lastT=performance.now();
 function loop(now){
   const dt=Math.min(50,now-lastT);lastT=now;
-  // Scroll momentum
-  if(!scrollDrag&&!state.drag){
-    cam.y+=cam.vy*(dt/16.67);
-    cam.vy*=0.92;
-    if(Math.abs(cam.vy)<0.1)cam.vy=0;
-    clampCam();
-  }
+  // SINGLE-SCREEN LAYOUT: camera stays at 0, no scrolling
+  cam.y=0;cam.vy=0;
+  // Decay burnout shake and intensity each frame during/after FULL
+  if(state.burnoutShake>0)state.burnoutShake=Math.max(0,state.burnoutShake-0.018);
+  if(state.burnoutIntensity>0&&state.phase!==PH.FULL)state.burnoutIntensity=Math.max(0,state.burnoutIntensity-0.012);
+  // Decay brain shake quickly (it's a fast red pulse, not a sustained effect)
+  if(state.brainShake>0)state.brainShake=Math.max(0,state.brainShake-0.045);
   if(state.phase!==PH.INTRO&&state.phase!==PH.FULL){
     Engine.update(eng,dt);
     tickForces(dt);
@@ -4081,19 +5368,416 @@ function loop(now){
     tickFx(dt);
   }
   bg();
-  cx.save();cx.translate(0,-cam.y);
+  // Compute screen-shake offset (random jitter scaled by burnoutShake)
+  const shakeX=state.burnoutShake>0?(Math.random()-0.5)*18*state.burnoutShake:0;
+  const shakeY=state.burnoutShake>0?(Math.random()-0.5)*18*state.burnoutShake:0;
+  cx.save();cx.translate(shakeX,shakeY-cam.y);
   if(state.phase!==PH.INTRO){
     drawHousing();
     drawFalling();
     drawBulb();
     drawChoice();
-    drawShapes();
     drawBrain();
+    drawShapes();
     drawDragWord();
     drawFx();
   }
   cx.restore();
+  // Screen-pulse flash on big combos (decays each frame)
+  if(state.screenPulse>0){
+    cx.save();
+    const flashG=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H));
+    flashG.addColorStop(0,`rgba(79,195,247,${0.18*state.screenPulse})`);
+    flashG.addColorStop(0.5,`rgba(139,111,255,${0.08*state.screenPulse})`);
+    flashG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=flashG;
+    cx.fillRect(0,0,W,H);
+    cx.restore();
+    state.screenPulse=Math.max(0,state.screenPulse-0.04);
+  }
+  // Burnout red overlay — saturating vignette + corner glitch bands.
+  // Plays whenever burnoutIntensity > 0 (peaks during FULL, decays after).
+  if(state.burnoutIntensity>0){
+    const bi=state.burnoutIntensity;
+    cx.save();
+    // Hot red vignette from edges inward
+    const vg=cx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.25,W/2,H/2,Math.max(W,H)*0.75);
+    vg.addColorStop(0,`rgba(255,40,40,${0.04*bi})`);
+    vg.addColorStop(0.55,`rgba(255,30,30,${0.18*bi})`);
+    vg.addColorStop(1,`rgba(180,10,10,${0.42*bi})`);
+    cx.fillStyle=vg;cx.fillRect(0,0,W,H);
+    // Top / bottom red glitch bands at peak intensity
+    if(bi>0.4){
+      cx.globalCompositeOperation='lighter';
+      cx.fillStyle=`rgba(255,40,40,${0.12*bi})`;
+      const bandH=8+Math.random()*16;
+      const bandY=Math.random()*H;
+      cx.fillRect(0,bandY,W,bandH);
+      cx.fillRect(0,H-bandY-bandH,W,bandH);
+    }
+    cx.restore();
+  }
+  // Subtle scanline overlay (retro-cyberpunk vibe - matches Gemini concept)
+  if(state.phase!==PH.INTRO)drawScanlines();
+  // Music-reactive audio waveform (screen space, after cam restore)
+  if(state.phase!==PH.INTRO)drawAudioWave();
+  // Screen-space HUD overlays (decorative cyberpunk panels — fixed in screen space)
+  if(state.phase!==PH.INTRO){
+    drawSideBoxes();
+    drawScreenHUD();
+  }
+  // Music-reactive flow bar glow — sampled and applied each frame
+  sampleAudioLevel();
+  applyMusicVisuals();
   requestAnimationFrame(loop);
+}
+
+// ---------- Faint scanline overlay for retro CRT/HUD feel ----------
+function drawScanlines(){
+  cx.save();
+  cx.globalAlpha=0.045;
+  cx.fillStyle='#4FC3F7';
+  for(let y=0;y<H;y+=3){
+    cx.fillRect(0,y,W,1);
+  }
+  // Subtle vignette darkening on edges
+  cx.globalAlpha=1;
+  const vg=cx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.7);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(0,0,0,0.45)');
+  cx.fillStyle=vg;
+  cx.fillRect(0,0,W,H);
+  cx.restore();
+}
+
+// ---------- Decorative cyberpunk HUD overlays (matches Gemini concept) ----------
+// ══════════════════════════════════════════════════════════════════
+// SIDE BOX SYSTEM — 6 boxes (3 per side), all fill with water
+// Left:  [FLOW] [FIGHTER] [DREAMER]
+// Right: [LEVEL] [QUITTER] [REBEL]
+// ══════════════════════════════════════════════════════════════════
+
+// Streak particles that drop into the LEVEL box
+let streakDrops=[];
+function addStreakDrop(){
+  const rx=(L.SBXR||W-72)+((L.SBW||64)/2);
+  streakDrops.push({x:rx+(Math.random()-0.5)*8,y:L.BT||H*0.24,vy:0,life:1});
+}
+
+const PBOX_DEFS=[
+  {key:'fighter',label:'SALIENCE', col:'#4FC3F7',side:'L',row:1},  // salience network: detects priority stimuli
+  {key:'dreamer',label:'DEF.MODE', col:'#CE93D8',side:'L',row:2},  // default mode network: mind-wandering
+  {key:'quitter',label:'AVOIDANT', col:'#FF5252',side:'R',row:1},  // avoidant coping style
+  {key:'rebel',  label:'IMPULSIV', col:'#FF9800',side:'R',row:2},  // impulsivity / dysregulation
+];
+
+function drawSideBoxes(){
+  if(state.phase===PH.INTRO)return;
+  const t=performance.now()*.001;
+  const BW=L.SBW||Math.min(W*0.115,68);
+  const fullH=L.BB-L.BT;
+  // Three boxes per side, stacked
+  const BH=Math.floor((fullH-8)/3)-4;
+  const LX=L.SBXL||4;
+  const RX=L.SBXR||W-BW-4;
+  // Raise the top FLOW and LEVEL boxes above the standard brain-top position
+  const y0=Math.max(L.BY+L.BR*2.2, L.BT-BH*0.45);
+  const rows=[y0, L.BT+2, L.BT+(BH+6)];
+
+  // ── Personality scores ──
+  const sc=state.personality;
+  const pVals=[sc.fighter,sc.dreamer,sc.quitter,sc.rebel];
+  const maxP=Math.max(1,...pVals);
+  const fills=pVals.map(v=>Math.min(1.0,v/Math.max(1,maxP*1.15)));
+  const domIdx=fills.indexOf(Math.max(...fills));
+
+  // ── Streak/Level score ──
+  const levelScore=Math.min(1,(state.erases||0)/Math.max(1,20));
+
+  // ── Flow box ──
+  const flowFill=Math.min(1,state.flow);
+
+  function drawWaterBox(bx,by,bw,bh,fill,col,label,isDom,ticker){
+    const bright=Math.pow(fill,0.5);
+    const glow=bright*(isDom?28:16);
+    cx.save();
+    if(fill>0.15){cx.shadowColor=col;cx.shadowBlur=glow;}
+    // Background
+    cx.fillStyle='rgba(0,0,0,0.70)';
+    cx.beginPath();cx.roundRect(bx,by,bw,bh,4);cx.fill();
+    // Water fill
+    const fillH=bh*fill;
+    if(fillH>0.5){
+      cx.save();
+      cx.beginPath();cx.roundRect(bx,by,bw,bh,4);cx.clip();
+      // Water body gradient
+      const wG=cx.createLinearGradient(bx,by+bh,bx,by+bh-fillH);
+      const hex=col;
+      wG.addColorStop(0,hex+(Math.round((0.35+bright*0.25)*255).toString(16).padStart(2,'0')));
+      wG.addColorStop(0.5,hex+(Math.round((0.50+bright*0.30)*255).toString(16).padStart(2,'0')));
+      const surfW=fill>0.65?(fill-0.65)/0.35:0;
+      if(surfW>0){
+        const wb=Math.round((0.65+surfW*0.35)*255);
+        wG.addColorStop(1,`rgba(${wb},${wb},${wb},${0.55+surfW*0.35})`);
+      }else{
+        wG.addColorStop(1,hex+(Math.round((0.65+bright*0.20)*255).toString(16).padStart(2,'0')));
+      }
+      cx.fillStyle=wG;
+      cx.fillRect(bx,by+bh-fillH,bw,fillH);
+      // Surface wave
+      const wY=by+bh-fillH;
+      cx.strokeStyle=col+(Math.round((0.40+bright*0.35)*255).toString(16).padStart(2,'0'));
+      cx.lineWidth=1.2;
+      cx.beginPath();
+      for(let px=0;px<=bw;px+=2){
+        const sy=wY+Math.sin((px/bw)*Math.PI*3+t*2.4)*2.0;
+        px===0?cx.moveTo(bx,sy):cx.lineTo(bx+px,sy);
+      }
+      cx.stroke();
+      // Sheen
+      if(bright>0.45){
+        const sAlpha=(bright-0.45)*0.45;
+        cx.fillStyle=`rgba(255,255,255,${sAlpha})`;
+        cx.fillRect(bx,wY,bw,5);
+      }
+      cx.restore();
+    }
+    // Border
+    cx.strokeStyle=col+(Math.round((0.25+bright*0.70)*255).toString(16).padStart(2,'0'));
+    cx.lineWidth=isDom?1.8:1.1;
+    cx.shadowColor=col;cx.shadowBlur=bright*14;
+    cx.beginPath();cx.roundRect(bx,by,bw,bh,4);cx.stroke();
+    cx.shadowBlur=0;
+    // Label
+    const lsz=Math.max(6,Math.floor(bw*0.155));
+    cx.fillStyle=fill<0.12?'rgba(255,255,255,.30)':col;
+    cx.font=`700 ${lsz}px monospace`;cx.textAlign='center';
+    cx.shadowColor=col;cx.shadowBlur=fill>0.25?5:0;
+    cx.fillText(label,bx+bw/2,by+lsz+2);
+    cx.shadowBlur=0;
+    // Ticker (percentage or level)
+    if(ticker!==undefined){
+      cx.fillStyle=`rgba(255,255,255,${0.38+bright*0.52})`;
+      cx.font=`500 ${lsz-1}px monospace`;
+      cx.fillText(ticker,bx+bw/2,by+bh-3);
+    }
+    // Dominant star
+    if(isDom&&fill>0.30){
+      cx.fillStyle=col;cx.globalAlpha=Math.min(1,(fill-0.30)/0.25);
+      cx.font=`bold ${Math.round(lsz*1.6)}px sans-serif`;
+      cx.fillText('★',bx+bw/2,by+bh/2+lsz*0.55);
+      cx.globalAlpha=1;
+    }
+    cx.restore();
+  }
+
+  // ── LEFT SIDE ──
+  // Box 0: FLOW
+  drawWaterBox(LX,rows[0],BW,BH,flowFill,'#4FC3F7','FLOW',false,Math.round(flowFill*100)+'%');
+  // Box 1: FIGHTER
+  drawWaterBox(LX,rows[1],BW,BH,fills[0],'#4FC3F7','SALIENCE',domIdx===0&&pVals[0]>2,null);
+  // Box 2: DREAMER
+  drawWaterBox(LX,rows[2],BW,BH,fills[1],'#CE93D8','DEF.MODE',domIdx===1&&pVals[1]>2,null);
+
+  // ── RIGHT SIDE ──
+  // Box 0: LEVEL (streaks absorbed)
+  // Draw streak particles dropping into level box
+  streakDrops.forEach((d,i)=>{
+    d.vy+=0.4;d.y+=d.vy;d.life-=0.018;
+    const dy=d.y-(rows[0]+BH-BH*levelScore);
+    if(dy>0){d.y=rows[0]+BH-BH*levelScore;d.vy*=-0.3;}
+    const a=Math.max(0,d.life);
+    cx.globalAlpha=a;
+    cx.fillStyle='#FFC832';
+    cx.shadowColor='#FFC832';cx.shadowBlur=8;
+    cx.beginPath();cx.arc(d.x,d.y,3,0,Math.PI*2);cx.fill();
+    cx.shadowBlur=0;cx.globalAlpha=1;
+  });
+  streakDrops=streakDrops.filter(d=>d.life>0&&d.y<rows[0]+BH+10);
+  drawWaterBox(RX,rows[0],BW,BH,levelScore,'#FFC832','LEVEL',false,`LV${Math.ceil(levelScore*10)||0}`);
+  // Box 1: QUITTER
+  drawWaterBox(RX,rows[1],BW,BH,fills[2],'#FF5252','AVOIDANT',domIdx===2&&pVals[2]>2,null);
+  // Box 2: REBEL
+  drawWaterBox(RX,rows[2],BW,BH,fills[3],'#FF9800','IMPULSIV',domIdx===3&&pVals[3]>2,null);
+
+  // ── DOMINANT PERSONALITY VERDICT ──
+  const dominated=pVals.some(v=>v>5);
+  if(dominated){
+    const domFill=fills[domIdx];
+    if(domFill>0.50){
+      const def=PBOX_DEFS[domIdx]||{col:'#4FC3F7',label:'FOCUSED'};
+      const fa=Math.min(1,(domFill-0.50)/0.25);
+      cx.save();
+      cx.globalAlpha=fa*0.90;
+      cx.fillStyle=def.col;
+      cx.font=`700 ${Math.min(W*0.030,12)}px monospace`;
+      cx.textAlign='center';
+      cx.shadowColor=def.col;cx.shadowBlur=10+Math.sin(t*2)*3;
+      cx.fillText('YOU ARE: '+def.label,W/2,L.BB+14);
+      cx.restore();
+    }
+  }
+}
+
+
+function drawScreenHUD(){
+  const t=performance.now()*.001;
+  cx.save();
+  cx.font='400 7px monospace';
+  cx.fillStyle='rgba(79,195,247,.55)';
+  cx.strokeStyle='rgba(79,195,247,.4)';
+  cx.lineWidth=1;
+  cx.shadowColor='rgba(79,195,247,.6)';
+  cx.shadowBlur=4;
+
+  // BRAIN ICON — moved to center-top above lightbulb (no overlap with side boxes)
+  const _bShk=state.brainShake||0;
+  const _bShkX=_bShk>0?(Math.random()-0.5)*6*_bShk:0;
+  const _bShkY=_bShk>0?(Math.random()-0.5)*3*_bShk:0;
+  // Position: small icon just left of center at very top, above the lightbulb
+  const rx=W*0.50-L.BR*2.8+_bShkX, ry=L.BY*0.55+_bShkY, rr=14;
+  const liveNegsHUD=state.shapes.filter(s=>!s.dead&&s.kind==='neg').length;
+  const hudOvld=liveNegsHUD>=10;
+  const hudHit=_bShk>0.2; // flash red on any new negative, fades quickly
+  const hudRed=hudOvld||hudHit;
+  const brainPulse=hudOvld?(0.85+Math.sin(t*7)*0.15):hudHit?(0.7+_bShk*0.3):1;
+  // Outer circular scanner frame — cyan normally, red on hit or overload
+  cx.strokeStyle=hudRed?`rgba(255,${hudOvld?80:120},82,${(hudOvld?0.5:_bShk*0.9)+Math.sin(t*6)*0.1})`:'rgba(79,195,247,.4)';
+  cx.lineWidth=hudRed?1.8:1.2;
+  cx.shadowColor=hudRed?'rgba(255,60,60,.7)':'rgba(79,195,247,.3)';
+  cx.shadowBlur=hudRed?12:4;
+  cx.beginPath();cx.arc(rx,ry,rr,0,Math.PI*2);cx.stroke();
+  cx.shadowBlur=4;
+  // Rotating sweep arc
+  cx.strokeStyle=hudOvld?'rgba(255,120,120,.85)':'rgba(120,210,255,.85)';
+  cx.lineWidth=1.6;
+  const sweep=t*0.9;
+  cx.beginPath();cx.arc(rx,ry,rr*0.94,sweep,sweep+0.7);cx.stroke();
+  // ——— Classic walnut brain silhouette ———
+  cx.save();
+  cx.translate(rx,ry);
+  const bs=rr*0.80;
+  cx.shadowColor=hudRed?'rgba(255,70,70,.9)':'rgba(79,195,247,.7)';
+  cx.shadowBlur=8;
+  cx.fillStyle=hudRed?'rgba(100,8,8,.80)':'rgba(18,55,105,.80)';
+  cx.strokeStyle=hudRed?`rgba(255,90,90,${brainPulse})`:'rgba(145,215,255,.98)';
+  cx.lineWidth=1.6;
+  // Fill pass
+  cx.beginPath();
+  cx.moveTo(-bs*0.16,bs*0.84);
+  cx.bezierCurveTo(-bs*0.22,bs*1.0,-bs*0.70,bs*0.80,-bs*0.96,bs*0.24);
+  cx.bezierCurveTo(-bs*1.10,-bs*0.06,-bs*1.05,-bs*0.78,-bs*0.66,-bs*0.98);
+  cx.bezierCurveTo(-bs*0.44,-bs*1.10,-bs*0.14,-bs*1.12,0,-bs*1.08);
+  cx.bezierCurveTo(bs*0.14,-bs*1.12,bs*0.44,-bs*1.10,bs*0.66,-bs*0.98);
+  cx.bezierCurveTo(bs*1.05,-bs*0.78,bs*1.10,-bs*0.06,bs*0.96,bs*0.24);
+  cx.bezierCurveTo(bs*0.70,bs*0.80,bs*0.22,bs*1.0,bs*0.16,bs*0.84);
+  cx.bezierCurveTo(bs*0.11,bs*0.96,-bs*0.11,bs*0.96,-bs*0.16,bs*0.84);
+  cx.closePath();cx.fill();
+  // Cerebellum bump lower-back
+  cx.fillStyle=hudRed?'rgba(140,8,8,.80)':'rgba(22,65,120,.82)';
+  cx.beginPath();cx.ellipse(bs*0.50,bs*0.54,bs*0.28,bs*0.17,0.25,0,Math.PI*2);cx.fill();
+  // Stroke main outline
+  cx.beginPath();
+  cx.moveTo(-bs*0.16,bs*0.84);
+  cx.bezierCurveTo(-bs*0.22,bs*1.0,-bs*0.70,bs*0.80,-bs*0.96,bs*0.24);
+  cx.bezierCurveTo(-bs*1.10,-bs*0.06,-bs*1.05,-bs*0.78,-bs*0.66,-bs*0.98);
+  cx.bezierCurveTo(-bs*0.44,-bs*1.10,-bs*0.14,-bs*1.12,0,-bs*1.08);
+  cx.bezierCurveTo(bs*0.14,-bs*1.12,bs*0.44,-bs*1.10,bs*0.66,-bs*0.98);
+  cx.bezierCurveTo(bs*1.05,-bs*0.78,bs*1.10,-bs*0.06,bs*0.96,bs*0.24);
+  cx.bezierCurveTo(bs*0.70,bs*0.80,bs*0.22,bs*1.0,bs*0.16,bs*0.84);
+  cx.bezierCurveTo(bs*0.11,bs*0.96,-bs*0.11,bs*0.96,-bs*0.16,bs*0.84);
+  cx.closePath();cx.stroke();
+  // Cerebellum stroke + fold line
+  cx.strokeStyle=hudRed?`rgba(255,100,100,${brainPulse})`:'rgba(145,215,255,.90)';
+  cx.lineWidth=1.1;
+  cx.beginPath();cx.ellipse(bs*0.50,bs*0.54,bs*0.28,bs*0.17,0.25,0,Math.PI*2);cx.stroke();
+  cx.beginPath();cx.moveTo(bs*0.25,bs*0.48);cx.quadraticCurveTo(bs*0.50,bs*0.42,bs*0.74,bs*0.52);cx.stroke();
+  cx.shadowBlur=0;
+  // Central fissure — dashed walnut-split from top notch downward
+  cx.strokeStyle='rgba(90,165,230,.55)';cx.lineWidth=0.9;cx.setLineDash([2,4]);
+  cx.beginPath();cx.moveTo(0,-bs*1.08);cx.bezierCurveTo(bs*0.05,-bs*0.55,-bs*0.05,bs*0.0,0,bs*0.52);cx.stroke();cx.setLineDash([]);
+  // Gyri — 3 each hemisphere
+  const gyCol=hudRed?'rgba(255,150,150,.60)':'rgba(120,200,255,.62)';
+  cx.strokeStyle=gyCol;cx.lineWidth=0.85;
+  cx.beginPath();cx.moveTo(-bs*0.82,-bs*0.62);cx.quadraticCurveTo(-bs*0.46,-bs*0.82,-bs*0.06,-bs*0.64);cx.stroke();
+  cx.beginPath();cx.moveTo(-bs*0.90,-bs*0.24);cx.quadraticCurveTo(-bs*0.50,-bs*0.42,-bs*0.06,-bs*0.24);cx.stroke();
+  cx.beginPath();cx.moveTo(-bs*0.84,bs*0.14);cx.quadraticCurveTo(-bs*0.46,bs*0.02,-bs*0.06,bs*0.14);cx.stroke();
+  cx.beginPath();cx.moveTo(bs*0.06,-bs*0.64);cx.quadraticCurveTo(bs*0.46,-bs*0.82,bs*0.82,-bs*0.60);cx.stroke();
+  cx.beginPath();cx.moveTo(bs*0.06,-bs*0.24);cx.quadraticCurveTo(bs*0.50,-bs*0.42,bs*0.90,-bs*0.22);cx.stroke();
+  cx.beginPath();cx.moveTo(bs*0.06,bs*0.14);cx.quadraticCurveTo(bs*0.46,bs*0.02,bs*0.84,bs*0.16);cx.stroke();
+  cx.restore();
+  cx.shadowBlur=0;
+  cx.fillStyle=hudRed?'rgba(255,140,140,.80)':'rgba(180,220,255,.55)';
+  cx.font='400 7px monospace';cx.textAlign='left';
+  cx.fillText(hudOvld?'⚠ OVERLOAD':hudHit?'⚠ HIT':'NEURAL SCAN',rx-24,ry+rr+10);
+  const radarPct=Math.min(100,Math.round(state.flow*100));
+  cx.fillStyle='#4FC3F7';
+  cx.fillText(radarPct+'% ACTIVE',rx-22,ry+rr+18);
+
+  // LEFT-SIDE: vertical mini-chart
+  const cy=H*0.62,ch=50;
+  cx.shadowBlur=3;
+  cx.strokeStyle='rgba(79,195,247,.3)';
+  cx.strokeRect(8,cy,30,ch);
+  cx.fillStyle='rgba(79,195,247,.5)';
+  for(let i=0;i<6;i++){
+    const bh=Math.abs(Math.sin(t*.7+i))*ch*0.9;
+    cx.fillRect(10+i*4.5,cy+ch-bh,3,bh);
+  }
+  cx.fillStyle='rgba(180,220,255,.55)';
+  cx.shadowBlur=0;
+  cx.fillText('FLOW',10,cy-3);
+
+  // RIGHT-SIDE: stats readouts
+  const sx=W-58;
+  cx.fillStyle='rgba(180,220,255,.55)';
+  cx.shadowColor='rgba(79,195,247,.4)';
+  cx.shadowBlur=3;
+  const flowPct=Math.min(100,Math.round(state.flow*100));
+  cx.fillText('LEVEL',sx,H*0.42);
+  cx.font='700 11px monospace';
+  cx.fillStyle='#4FC3F7';
+  cx.shadowBlur=6;
+  cx.fillText(String(flowPct).padStart(4,'0')+'.50',sx,H*0.42+12);
+  cx.font='400 7px monospace';
+  cx.fillStyle='rgba(180,220,255,.55)';
+  cx.shadowBlur=3;
+  cx.fillText('STREAK',sx,H*0.50);
+  cx.font='700 11px monospace';
+  cx.fillStyle='#4FC3F7';
+  cx.shadowBlur=6;
+  cx.fillText('x'+(state.streak||0),sx,H*0.50+12);
+
+  // RIGHT-SIDE: mini bar chart
+  cx.font='400 7px monospace';
+  cx.fillStyle='rgba(180,220,255,.55)';
+  cx.shadowBlur=3;
+  cx.fillText('PULSE',sx,H*0.58);
+  cx.shadowBlur=2;
+  cx.strokeStyle='rgba(79,195,247,.35)';
+  cx.beginPath();
+  for(let i=0;i<24;i++){
+    const px=sx+i*2,py=H*0.62+Math.sin(t*4+i*.5)*6;
+    if(i===0)cx.moveTo(px,py);
+    else cx.lineTo(px,py);
+  }
+  cx.stroke();
+
+  // Frame corner brackets (cyberpunk detail)
+  cx.shadowBlur=0;
+  cx.strokeStyle='rgba(79,195,247,.5)';
+  cx.lineWidth=1.5;
+  const corner=14;
+  // TL
+  cx.beginPath();cx.moveTo(6,corner);cx.lineTo(6,6);cx.lineTo(corner,6);cx.stroke();
+  // TR
+  cx.beginPath();cx.moveTo(W-corner,6);cx.lineTo(W-6,6);cx.lineTo(W-6,corner);cx.stroke();
+  // BL
+  cx.beginPath();cx.moveTo(6,H-corner);cx.lineTo(6,H-6);cx.lineTo(corner,H-6);cx.stroke();
+  // BR
+  cx.beginPath();cx.moveTo(W-corner,H-6);cx.lineTo(W-6,H-6);cx.lineTo(W-6,H-corner);cx.stroke();
+
+  cx.restore();
 }
 
 // ---------- Input ----------
@@ -4115,7 +5799,7 @@ function onDown(e){
     let picked=null;
     state.choice.forEach(c=>{
       const cyPos=L.BY+L.BR*.3;
-      if(Math.abs(p.x-c.x)<80&&Math.abs(wy-cyPos)<25)picked=c;
+      if(Math.abs(p.x-c.x)<80&&Math.abs(wy-cyPos)<42)picked=c;
     });
     if(picked){
       // Vanish the other, start drag
@@ -4174,8 +5858,29 @@ function onUp(e){
   
   if(state.drag){
     const d=state.drag;
-    // Normal spawn at drop position - no resizing
-    spawnShape(d.word,d.x,d.y,d.vx,d.vy);
+    // Clamp drop position to inside the brain container.
+    // If the player drops WAY outside (more than 60px beyond edge), cancel the drag
+    // and return the word to the choice pool so the game doesn't break.
+    const worldY=d.y; // already in world coords
+    // Only cancel if dropped FAR to the sides (not above brain - player drags from top)
+    const padX=40;
+    const tooFarX=d.x < L.BCX-L.BHW-padX || d.x > L.BCX+L.BHW+padX;
+    // Do NOT cancel drops from above the brain — clamp them to the top of the brain
+    const tooFarBelow=worldY > L.BB+80;
+    if(tooFarX||tooFarBelow){
+      // Cancel drag — put the word back as a choice item
+      state.choice=[{word:d.word,kind:d.kind,x:W/2,y:L.BY,vanish:0}];
+      state.phase=PH.CHOICE;state.t=0;
+      state.drag=null;
+      updHUD();
+      return;
+    }
+    // Clamp X inside brain; clamp Y to brain bounds (drops from above → spawn at brain top)
+    const cx2=Math.max(L.BCX-L.BHW+20, Math.min(L.BCX+L.BHW-20, d.x));
+    // Spawn ABOVE the brain top so the word visibly falls IN from the top.
+    // If dropped anywhere above brain bottom, always start from just above brain.
+    const cy2=worldY>L.BB-30?L.BB-30:L.BT-35;
+    spawnShape(d.word,cx2,cy2,d.vx,d.vy);
     state.drag=null;
     state.phase=PH.SETTLE;state.t=0;
     updHUD();
@@ -4198,6 +5903,9 @@ window.addEventListener('touchcancel',onUp,{passive:false});
 // ---------- Brain full ----------
 function triggerFull(){
   state.phase=PH.FULL;
+  // Kick off burnout cinematic: red saturation ramps up, screen shakes hard then decays.
+  state.burnoutIntensity=1;
+  state.burnoutShake=1;
   // Save progress - flow state reached for this category
   // (only when reaching by clearing, not by overflow)
   if(state.flow>=1)markCategoryCleared(state.category);
@@ -4229,7 +5937,7 @@ document.getElementById('over').addEventListener('click',()=>{
   // Reset full state
   document.getElementById('over').classList.remove('show');
   state.shapes.forEach(s=>{if(!s.dead)Composite.remove(eng.world,s.body);});
-  state.shapes=[];state.fx=[];state.flow=0;state.hitWater=0;state.missWater=0;
+  state.shapes=[];state.fx=[];state.flow=0;state.hitWater=0;state.missWater=0;state.positiveStreak=0;state.zapPending=false;state.procBonus=false;state.brainShake=0;state.personality={fighter:0,dreamer:0,quitter:0,rebel:0};
   cam.y=0;cam.vy=0;
   document.getElementById('intro').classList.remove('gone');
   document.getElementById('menuBtn').classList.remove('show');
@@ -4238,7 +5946,9 @@ document.getElementById('over').addEventListener('click',()=>{
 });
 
 // ---------- Boot screen → Gallery wall ----------
-document.getElementById('initSyncBtn').addEventListener('click',()=>{
+// initSyncBtn is hidden (intro cinematic plays instead). Kept as no-op for safety.
+const _initBtn=document.getElementById('initSyncBtn');
+if(_initBtn)_initBtn.addEventListener('click',()=>{
   document.getElementById('bootScreen').classList.add('gone');
   document.getElementById('intro').classList.remove('gone');
   refreshIntroBadges();
@@ -4258,11 +5968,12 @@ document.querySelectorAll('.gallery-frame[data-cat]').forEach(btn=>{
 function returnHome(){
   // Reset everything and show intro (gallery wall, not boot screen)
   state.shapes.forEach(s=>{if(!s.dead)Composite.remove(eng.world,s.body);});
-  state.shapes=[];state.fx=[];state.flow=0;state.hitWater=0;state.missWater=0;
+  state.shapes=[];state.fx=[];state.flow=0;state.hitWater=0;state.missWater=0;state.positiveStreak=0;state.zapPending=false;state.procBonus=false;state.brainShake=0;state.personality={fighter:0,dreamer:0,quitter:0,rebel:0};
   state.falling=[];state.choice=[];state.drag=null;state.housing=[];
   cam.y=0;cam.vy=0;
   state.phase=PH.INTRO;
   document.getElementById('over').classList.remove('show');
+  // Re-play intro or just show category select (depending on context)
   document.getElementById('intro').classList.remove('gone');
   document.getElementById('bootScreen').classList.add('gone');
   document.getElementById('menuBtn').classList.remove('show');
@@ -4273,7 +5984,7 @@ function returnHome(){
 function restartCategory(){
   // Empty the brain but keep the current category
   state.shapes.forEach(s=>{if(!s.dead)Composite.remove(eng.world,s.body);});
-  state.shapes=[];state.fx=[];state.flow=0;state.hitWater=0;state.missWater=0;
+  state.shapes=[];state.fx=[];state.flow=0;state.hitWater=0;state.missWater=0;state.positiveStreak=0;state.zapPending=false;state.procBonus=false;state.brainShake=0;state.personality={fighter:0,dreamer:0,quitter:0,rebel:0};
   state.falling=[];state.choice=[];state.drag=null;
   cam.y=0;cam.vy=0;
   document.getElementById('over').classList.remove('show');
@@ -4314,6 +6025,430 @@ document.getElementById('menuPopup').addEventListener('click',(e)=>{
     document.getElementById('menuPopup').classList.remove('show');
   }
 });
+
+
+// ---------- Background music engine ----------
+// To add more tracks: drop files into www/audio/ and add their paths to TRACKS.
+// If the files can't be found (standalone HTML without the audio/ folder),
+// the game automatically falls back to a procedural ambient soundtrack.
+const TRACKS=['audio/audio.mp3','audio/forest_gump.mp3','audio/janet.mp3'];
+
+const bgMusic=document.getElementById('bgMusic');
+let currentTrackIdx=0;
+let musicStarted=false;
+let proceduralMode=false; // true when we've switched to generated music
+
+// ---------- Web Audio analyser (for music-reactive flow bar) ----------
+let audioCtx=null,audioAnalyser=null,audioBuf=null;
+let audioLevel=0;
+
+function setupAudioAnalyser(){
+  if(audioCtx)return;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    audioCtx=new AC();
+    const src=audioCtx.createMediaElementSource(bgMusic);
+    audioAnalyser=audioCtx.createAnalyser();
+    audioAnalyser.fftSize=128;
+    audioAnalyser.smoothingTimeConstant=0.78;
+    src.connect(audioAnalyser);
+    audioAnalyser.connect(audioCtx.destination);
+    audioBuf=new Uint8Array(audioAnalyser.frequencyBinCount);
+  }catch(e){
+    console.warn('Audio analyser unavailable:',e);
+  }
+}
+
+// ---------- Procedural ambient fallback (plays when MP3 files are missing) ----------
+// Vaporwave pad: 4-note chords, sine waves, slow cross-fade, tremolo LFO.
+// Feeds directly into the same analyser so music-reactive visuals still work.
+let _procCtx=null,_procAnalyser=null,_procBuf=null;
+let _procOscs=[],_procInterval=null;
+
+// Chord progression: Fmaj7 → Dmin7 → Bbmaj7 → Cmaj7 (cycle every 5s)
+const _CHORDS=[
+  [87.31,130.81,164.81,220.00],  // F2–C3–E3–A3  (Fmaj7)
+  [73.42,110.00,130.81,174.61],  // D2–A2–C3–F3  (Dmin7)
+  [58.27,116.54,146.83,174.61],  // Bb1–Bb2–D3–F3 (Bbmaj7)
+  [65.41, 98.00,164.81,196.00],  // C2–G2–E3–G3  (Cmaj7)
+];
+let _chordIdx=0;
+
+function _startProceduralMusic(){
+  if(_procCtx)return;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return;
+  proceduralMode=true;
+  _procCtx=new AC();
+
+  // Master chain: oscillators → gain → analyser → destination
+  const master=_procCtx.createGain();
+  master.gain.value=0; // fade in
+  master.gain.linearRampToValueAtTime(0.22, _procCtx.currentTime+2.5);
+
+  // Warm low-pass filter
+  const lpf=_procCtx.createBiquadFilter();
+  lpf.type='lowpass'; lpf.frequency.value=640; lpf.Q.value=0.6;
+
+  // Tremolo LFO (slow 0.25 Hz wobble for that vaporwave feel)
+  const lfo=_procCtx.createOscillator();
+  const lfoGain=_procCtx.createGain();
+  lfo.frequency.value=0.25; lfo.type='sine';
+  lfoGain.gain.value=0.08;
+  lfo.connect(lfoGain); lfo.start();
+
+  // Analyser (so audioLevel reads from procedural music too)
+  _procAnalyser=_procCtx.createAnalyser();
+  _procAnalyser.fftSize=128;
+  _procAnalyser.smoothingTimeConstant=0.78;
+  _procBuf=new Uint8Array(_procAnalyser.frequencyBinCount);
+
+  lpf.connect(master);
+  lfoGain.connect(master.gain);
+  master.connect(_procAnalyser);
+  _procAnalyser.connect(_procCtx.destination);
+
+  function playChord(freqs){
+    // Fade out previous
+    _procOscs.forEach(({o,g})=>{
+      g.gain.setTargetAtTime(0,_procCtx.currentTime,0.6);
+      o.stop(_procCtx.currentTime+3);
+    });
+    _procOscs=[];
+    // Fade in new
+    freqs.forEach((freq,i)=>{
+      const o=_procCtx.createOscillator();
+      const g=_procCtx.createGain();
+      o.type='sine';
+      o.frequency.value=freq;
+      o.detune.value=(Math.random()-0.5)*10; // subtle detune for thickness
+      g.gain.value=0;
+      g.gain.setTargetAtTime(0.28/(freqs.length), _procCtx.currentTime, 1.4);
+      o.connect(g); g.connect(lpf);
+      o.start(); _procOscs.push({o,g});
+      // Add a gentle 2nd harmonic at lower volume for richness
+      const o2=_procCtx.createOscillator();
+      const g2=_procCtx.createGain();
+      o2.type='sine'; o2.frequency.value=freq*2; o2.detune.value=6;
+      g2.gain.value=0;
+      g2.gain.setTargetAtTime(0.06/(freqs.length), _procCtx.currentTime, 2.0);
+      o2.connect(g2); g2.connect(lpf);
+      o2.start(); _procOscs.push({o:o2,g:g2});
+    });
+  }
+
+  playChord(_CHORDS[_chordIdx]);
+  _procInterval=setInterval(()=>{
+    _chordIdx=(_chordIdx+1)%_CHORDS.length;
+    playChord(_CHORDS[_chordIdx]);
+  },5200);
+
+  musicStarted=true;
+  console.log('Procedural ambient music started (MP3 files not found)');
+}
+
+// Override sampleAudioLevel to also read from procedural analyser
+const _origSample=typeof sampleAudioLevel!=='undefined'?null:null; // placeholder
+function _sampleProcLevel(){
+  if(!_procAnalyser||!_procBuf)return;
+  _procAnalyser.getByteFrequencyData(_procBuf);
+  let sum=0,wsum=0;
+  for(let i=0;i<_procBuf.length;i++){
+    const w=i<_procBuf.length/2?1.4:0.6;
+    sum+=_procBuf[i]*w; wsum+=w;
+  }
+  const raw=sum/(wsum*255);
+  audioLevel=audioLevel*0.55+raw*0.45;
+}
+
+// Detect audio file load failure → switch to procedural
+bgMusic.addEventListener('error',()=>{
+  if(!musicStarted&&audioSettings.enabled){
+    console.warn('MP3 files not found, switching to procedural music');
+    // Will start on first user interaction (audio context needs a gesture)
+    proceduralMode=true; // flag it now so tryStartMusic routes correctly
+  }
+});
+// Also catch stalled / empty src situations
+bgMusic.addEventListener('stalled',()=>{
+  if(!musicStarted) setTimeout(()=>{ if(!musicStarted) proceduralMode=true; },2000);
+});
+
+// Proactively test if the first track actually exists using a HEAD request
+// If it 404s immediately set proceduralMode so the first tap starts synth music
+fetch(TRACKS[0],{method:'HEAD'}).catch(()=>{
+  proceduralMode=true;
+});
+function sampleAudioLevel(){
+  // Route to procedural analyser when in fallback mode
+  if(proceduralMode){ _sampleProcLevel(); return; }
+  if(!audioAnalyser||!audioBuf)return;
+  audioAnalyser.getByteFrequencyData(audioBuf);
+  let sum=0,wsum=0;
+  for(let i=0;i<audioBuf.length;i++){
+    const w=i<audioBuf.length/2?1.4:0.6;
+    sum+=audioBuf[i]*w;wsum+=w;
+  }
+  const raw=sum/(wsum*255);
+  audioLevel=audioLevel*0.6+raw*0.4;
+}
+// Apply the current audio level to the flow bar AND the neural background.
+// More dramatic music-lock: bar pulses hot (cyan→magenta→white at peaks),
+// neurons glow brighter and connection threshold expands on beat, brain outline
+// breathes with the music.
+let _audioNeuronBoost=0; // shared with bg() to pulse connections
+function applyMusicVisuals(){
+  const fillEl=document.getElementById('fill');
+  if(!fillEl)return;
+  const lvl=audioLevel;
+  // Hard-clamp a "beat" value — spikes to 1 on loud transients, decays
+  _audioNeuronBoost=Math.max(_audioNeuronBoost*0.88, lvl*1.4);
+
+  // Color chain: cyan → violet → white as level rises
+  let r,g,b;
+  if(lvl<0.45){
+    // cyan → violet
+    const p=lvl/0.45;
+    r=Math.round(79+p*120);   // 79→199
+    g=Math.round(195-p*80);   // 195→115
+    b=Math.round(247-p*10);   // 247→237
+  }else{
+    // violet → near-white
+    const p=(lvl-0.45)/0.55;
+    r=Math.round(199+p*56);   // 199→255
+    g=Math.round(115+p*130);  // 115→245
+    b=Math.round(237+p*18);   // 237→255
+  }
+  const col=`rgb(${r},${g},${b})`;
+
+  // Glow massively stronger at high levels
+  const glow=8+lvl*80;
+  const haloA=0.15+lvl*0.85;
+  const bloom=lvl>0.6?` 0 0 ${glow*6}px rgba(${r},${g},${b},${(lvl-0.6)*0.9}),`:' ';
+  fillEl.style.background=`linear-gradient(90deg,${col},rgba(${Math.min(255,r+30)},${Math.min(255,g+30)},${b},0.9))`;
+  fillEl.style.boxShadow=
+    `0 0 ${glow}px ${col},`+
+    `0 0 ${glow*2.5}px rgba(${r},${g},${b},${haloA*0.55}),`+
+    `0 0 ${glow*5}px rgba(${r},${g},${b},${haloA*0.22}),`+
+    bloom+
+    `inset 0 0 ${4+lvl*8}px rgba(255,255,255,${0.08+lvl*0.18})`;
+  fillEl.style.filter=`brightness(${1+lvl*0.9}) saturate(${1+lvl*0.90}) contrast(${1+lvl*0.2})`;
+
+  // Height pulse — bar breathes with the music
+  const barH=3+Math.round(lvl*9);
+  const barEl=document.getElementById('bar');
+  if(barEl){barEl.style.height=barH+'px';}
+
+  // Push neural background neurons to glow with the beat
+  if(lvl>0.35&&bgNeurons.length){
+    const boost=_audioNeuronBoost;
+    // Boost a random subset each frame rather than all at once (looks more organic)
+    const n=Math.ceil(bgNeurons.length*boost*0.4);
+    for(let i=0;i<n;i++){
+      const idx=Math.floor(Math.random()*bgNeurons.length);
+      bgNeurons[idx].glow=Math.min(0.9,bgNeurons[idx].glow+boost*0.5);
+    }
+  }
+
+  // Canvas-side mini waveform (stored for drawAudioWave())
+  _audioWaveLvl=lvl;
+}
+let _audioWaveLvl=0;
+// Called from loop() in screen space (no cam transform)
+function drawAudioWave(){
+  if(!audioAnalyser||!audioBuf)return;
+  audioAnalyser.getByteFrequencyData(audioBuf);
+  const barY=H-28; // just above the bottom HUD area
+  const barW=W*0.55;
+  const barX=(W-barW)/2;
+  const bins=Math.min(32,audioBuf.length);
+  const bw=barW/bins;
+  const lvl=_audioWaveLvl;
+  const r=Math.round(79+lvl*176),g=Math.round(195-lvl*45),b=Math.round(247-lvl*90);
+  cx.save();
+  cx.globalAlpha=0.65+lvl*0.35;
+  cx.shadowColor=`rgb(${r},${g},${b})`;
+  cx.shadowBlur=8+lvl*12;
+  for(let i=0;i<bins;i++){
+    const val=audioBuf[i]/255;
+    const bh=Math.max(2,val*22);
+    const grd=cx.createLinearGradient(0,barY-bh,0,barY);
+    grd.addColorStop(0,`rgba(${r},${g},${b},${0.9})`);
+    grd.addColorStop(1,`rgba(${r},${g},${b},0.1)`);
+    cx.fillStyle=grd;
+    cx.fillRect(barX+i*bw+1,barY-bh,bw-2,bh);
+  }
+  cx.restore();
+}
+
+// Load persisted settings (or set defaults)
+function loadAudioSettings(){
+  try{
+    const raw=localStorage.getItem('mre_audio_v1');
+    if(!raw)return{volume:0.5,enabled:true};
+    return JSON.parse(raw);
+  }catch(e){return{volume:0.5,enabled:true};}
+}
+function saveAudioSettings(s){
+  try{localStorage.setItem('mre_audio_v1',JSON.stringify(s));}catch(e){}
+}
+const audioSettings=loadAudioSettings();
+bgMusic.volume=audioSettings.volume;
+
+// When a track ends, rotate to the next one (if multiple exist)
+bgMusic.addEventListener('ended',()=>{
+  if(TRACKS.length>1){
+    currentTrackIdx=(currentTrackIdx+1)%TRACKS.length;
+    bgMusic.src=TRACKS[currentTrackIdx];
+    bgMusic.play().catch(()=>{});
+  }
+});
+// If only one track, loop attribute on <audio> handles it. With multiple, we disable loop:
+if(TRACKS.length>1)bgMusic.loop=false;
+
+// Browsers block autoplay until first user gesture - start music on first interaction
+function tryStartMusic(){
+  if(musicStarted||!audioSettings.enabled)return;
+  if(proceduralMode){ 
+    // Flagged as no-MP3 — start synth music on first user gesture
+    if(!_procCtx) _startProceduralMusic();
+    else if(_procCtx.state==='suspended')_procCtx.resume().catch(()=>{});
+    return;
+  }
+  setupAudioAnalyser();
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume().catch(()=>{});
+  bgMusic.play().then(()=>{
+    musicStarted=true;
+  }).catch(()=>{
+    // File load likely failed — start procedural fallback
+    if(!proceduralMode&&audioSettings.enabled) _startProceduralMusic();
+  });
+}
+// Hook into first tap anywhere
+['touchstart','mousedown','keydown'].forEach(evt=>{
+  document.addEventListener(evt,tryStartMusic,{once:false,passive:true});
+});
+
+// ---------- Settings panel wiring ----------
+const settingsBtn=document.getElementById('settingsBtn');
+const settingsPopup=document.getElementById('settingsPopup');
+const settingsClose=document.getElementById('settingsClose');
+const musicToggle=document.getElementById('musicToggle');
+const volumeSlider=document.getElementById('volumeSlider');
+const musicStateLabel=document.getElementById('musicStateLabel');
+const volumeLabel=document.getElementById('volumeLabel');
+
+// Apply persisted settings to UI
+musicToggle.checked=audioSettings.enabled;
+musicStateLabel.textContent=audioSettings.enabled?'on':'off';
+volumeSlider.value=Math.round(audioSettings.volume*100);
+volumeLabel.textContent=Math.round(audioSettings.volume*100)+'%';
+
+// Open settings from menu
+settingsBtn.addEventListener('click',()=>{
+  document.getElementById('menuPopup').classList.remove('show');
+  settingsPopup.classList.add('show');
+});
+// Close settings
+settingsClose.addEventListener('click',()=>{
+  settingsPopup.classList.remove('show');
+});
+
+// Toggle music on/off
+musicToggle.addEventListener('change',()=>{
+  audioSettings.enabled=musicToggle.checked;
+  musicStateLabel.textContent=audioSettings.enabled?'on':'off';
+  saveAudioSettings(audioSettings);
+  if(audioSettings.enabled){
+    if(proceduralMode){
+      if(_procCtx)_procCtx.resume().catch(()=>{});
+    }else{
+      bgMusic.play().then(()=>{musicStarted=true;}).catch(()=>{ _startProceduralMusic(); });
+    }
+  }else{
+    if(proceduralMode){ if(_procCtx)_procCtx.suspend().catch(()=>{}); }
+    else bgMusic.pause();
+  }
+});
+// Volume slider
+volumeSlider.addEventListener('input',()=>{
+  const v=parseInt(volumeSlider.value,10);
+  audioSettings.volume=v/100;
+  bgMusic.volume=audioSettings.volume;
+  volumeLabel.textContent=v+'%';
+  saveAudioSettings(audioSettings);
+});
+
+// Pause music when tab is hidden (saves battery, respects user)
+document.addEventListener('visibilitychange',()=>{
+  if(proceduralMode){
+    if(_procCtx){
+      if(document.hidden) _procCtx.suspend().catch(()=>{});
+      else _procCtx.resume().catch(()=>{});
+    }
+    return;
+  }
+  if(document.hidden){
+    if(!bgMusic.paused)bgMusic.pause();
+  }else if(audioSettings.enabled&&musicStarted){
+    bgMusic.play().catch(()=>{});
+  }
+});
+
+
+// ---------- PROCRASTINATE button ----------
+// "Kicking the can down the road" — clears 2 of the heaviest existing negatives
+// but immediately spawns 5 new ones falling into the brain. Net cost: +3 thoughts.
+// Disabled briefly after each press to prevent spam.
+const PROC_COOLDOWN_MS=2500;
+function procrastinate(){
+  if(state.procCooldown>0)return;
+  if(state.phase===PH.INTRO||state.phase===PH.FULL)return;
+  // 1) Find the 2 largest existing negatives by physics body area (proxy for "big ones")
+  const lives=state.shapes.filter(s=>!s.dead&&s.kind==='neg');
+  // Sort by bounding-box area, biggest first
+  lives.sort((a,b)=>{
+    const bA=a.body.bounds,bB=b.body.bounds;
+    if(!bA||!bB)return 0;
+    const areaA=(bA.max.x-bA.min.x)*(bA.max.y-bA.min.y);
+    const areaB=(bB.max.x-bB.min.x)*(bB.max.y-bB.min.y);
+    return areaB-areaA;
+  });
+  const toClear=lives.slice(0,2);
+  toClear.forEach(s=>dissolve(s));
+  // 2) Spawn 5 new negatives from the brain ceiling, spread across the width
+  const d=CATEGORY_DATA[state.category];
+  for(let i=0;i<5;i++){
+    const w=d.words[Math.floor(Math.random()*d.words.length)].name;
+    const xJitter=L.BCX+(Math.random()-0.5)*L.BHW*1.4;
+    const yStart=L.BT+10;
+    setTimeout(()=>{
+      // Slight stagger so they don't all collide at the same instant
+      spawnShape(w,xJitter,yStart,(Math.random()-0.5)*1.2,0.5);
+    },i*70);
+  }
+  // 3) Visual + audio cue: red screen flash + tiny camera shake
+  state.burnoutIntensity=Math.max(state.burnoutIntensity,0.45);
+  state.burnoutShake=Math.max(state.burnoutShake,0.35);
+  // 4) Grant a 2× positive boost on the NEXT CHOICE round as compensation
+  state.procBonus=true;
+  // --- Personality scoring: procrastinating is a rebel move ---
+  state.personality.rebel+=3;
+  // 4) Cooldown UI
+  state.procCooldown=PROC_COOLDOWN_MS;
+  const pb=document.getElementById('procBtn');
+  if(pb)pb.classList.add('cooldown');
+  setTimeout(()=>{
+    state.procCooldown=0;
+    if(pb)pb.classList.remove('cooldown');
+  },PROC_COOLDOWN_MS);
+}
+const procBtn=document.getElementById('procBtn');
+if(procBtn){
+  procBtn.addEventListener('click',(e)=>{e.preventDefault();procrastinate();});
+  procBtn.addEventListener('touchend',(e)=>{e.preventDefault();procrastinate();},{passive:false});
+}
 
 
 // ---------- Boot ----------
